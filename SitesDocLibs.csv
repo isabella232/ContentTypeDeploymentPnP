@@ -1,0 +1,4 @@
+﻿SiteName,SiteUrl,DocLib,CTName
+Marketing,https://contoso.sharepoint.com/sites/Marketing,Emails,OnePlaceMail Email
+Accounting,https://contoso.sharepoint.com/sites/Accounting,Emails,ACC Incoming Email
+Accounting,https://contoso.sharepoint.com/sites/Accounting,Emails,ACC Outgoing Email
