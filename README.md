@@ -37,7 +37,7 @@ Any Site Content Types listed that already exist in your SharePoint Environment 
 2. Run the below command to invoke the current version of the script:
 
 ```
-Invoke-Expression (New-Object Net.WebClient).DownloadString(‘https://raw.githubusercontent.com/ashleygagregory/OPS_Scripts/master/Content%20Type%20Deployment/Multiple%20Sites%20Multiple%20Libraries/DeployECTToSitesDoclibs.ps1’)
+Invoke-Expression (New-Object Net.WebClient).DownloadString(‘https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/raw/master/DeployECTToSitesDoclibs.ps1’)
 ```
 
 ## License
