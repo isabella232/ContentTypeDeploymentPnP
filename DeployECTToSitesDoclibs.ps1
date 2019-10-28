@@ -235,7 +235,7 @@ Try{
                 'Y'{
                     $script:createDefaultViews = $true
                     $script:emailViewName = Read-Host -Prompt "Please enter the name for the Email View to be created (leave blank for default 'OnePlaceMail Emails')"
-                    If($script:emailViewName -eq ""){$script:emailViewName = "OnePlaceMail Emails"}
+                    If(-not $script:emailViewName){$script:emailViewName = "OnePlaceMail Emails"}
                 }
                 'q'{return}
             }
@@ -272,7 +272,7 @@ Try{
         
         #Get the Group name containing the OnePlaceMail Email Columns for use later per site, default is 'OnePlaceMail Solutions'
         $script:groupName = Read-Host -Prompt "Please enter the Group name containing the OnePlaceMail Email Columns in your SharePoint Site Collections (leave blank for default 'OnePlace Solutions')"
-        If($script:groupName -eq ""){$script:groupName = "OnePlace Solutions"}
+        If(-not $script:groupName){$script:groupName = "OnePlace Solutions"}
 
         emailColumnsMenu
         emailViewMenu
@@ -314,7 +314,7 @@ Try{
 
             #Retrieve all the columns/fields for the group specified in this Site Collection, we will add these to the named Content Types shortly. If we do not get the site columns, skip this Site Collection
             $script:emailColumns = Get-PnPField -Group $script:groupName
-            If($script:emailColumns -eq $null){
+            If((-not $script:emailColumns) -or (-not $script:groupName)){
                 Write-Host "Email Columns not found in Site Columns group '$script:groupName' for Site Collection '$siteName'. Skipping."
                 Pause
                 Continue
@@ -322,7 +322,8 @@ Try{
             Write-Host "Columns found for group '$groupName':"
             $script:emailColumns | Format-Table
             Write-Host "These Columns will be added to the Site Content Types listed."
-
+            Pause
+            
             #Get the Content Type Object for 'Document' from SP, we will use this as the parent Content Type for our email Content Type
             $DocCT = Get-PnPContentType -Identity "Document"
             If($DocCT -eq $null){
