@@ -6,11 +6,15 @@ A script and sample CSV file to create the OnePlace Solutions Email Columns, add
 
 Please read the entire README (this page) before using the script to ensure you understand it's prerequisites and considerations/limitations.
 
-Download the SitesDocLibs.csv file above and customize it to your requirements. You will be prompted for this file by the script. If you are using Microsoft Edge, you will have to open the CSV file in Github, right click 'Raw' and 'Save Target As'. When you have finished customizing the file, please close it to ensure the script can correctly read it.
+Download the SitesDocLibs.csv file above and customize it to your requirements. You will be prompted for this file by the script. If you are using Microsoft Edge, you will have to open the CSV file in Github, right click 'Raw' and 'Save Target As'. 
 
-Note that you need a new line for each uniquely named Site Content Type, and to define which Site Collection it will be created in, and (optionally) which Document Library it will be added to. When listing a subsite/subweb for the 'SiteUrl', the content type will be created in it's parent Site Collection, eg http://<span>contoso.sharepoint.com/sites/**SiteCollection**/SubSite.
+Notes regarding the CSV file:
+* You need a new line for each uniquely named Site Content Type, and to define which Site Collection it will be created in, and (optionally) which Document Library it will be added to. 
+* When listing a subsite/subweb for the 'SiteUrl', the content type will be created in it's parent Site Collection, eg http://<span>contoso.sharepoint.com/sites/**SiteCollection**/SubSite. You can still list a Document Library within that Subsite to have the Site Content Type added to.
+* You may use this script for purely Site Column/Content Type creation by omitting any data for the Document Library column.
+* Any Site Content Types listed in the CSV that already exist in your SharePoint Environment will have the Email Columns added to it (and preserve the existing columns).
 
-Any Site Content Types listed that already exist in your SharePoint Environment will have the Email Columns added to it (and preserve the existing columns).
+When you have finished customizing the file, please save and close it to ensure the script can correctly read it.
 
 ### Prerequisites
 
@@ -32,11 +36,11 @@ Any Site Content Types listed that already exist in your SharePoint Environment 
 
 ### Usage
 
-Please download and modify the CSV before starting. Note that you may use this script for purely Site Column/Content Type creation by omitting any data for the Document Library column.
+Please download and modify the CSV before starting. 
 
 1. Start PowerShell on your machine
 
-2. Run the below command to invoke the current version of the script:
+2. Run the below command to invoke the current(master) version of the script:
 
 ```
 Invoke-Expression (New-Object Net.WebClient).DownloadString(‘https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/raw/master/DeployECTToSitesDoclibs.ps1’)
@@ -49,4 +53,3 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 ## Acknowledgments
 
 * Colin Wood for his code example on CSV parsing/iterating, and the original Email Columns deployment script.
-
