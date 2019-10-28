@@ -12,15 +12,15 @@ Try{
     $script:isSPOnline = $true
 
     #Flag for whether we create default email views or not, and if so what name to use
-    $script:createDefaultViews = $null
-    $script:emailViewName
+    $script:createDefaultViews = $false
+    $script:emailViewName = $null
 
     #Flag for whether we automatically create the OnePlaceMail Email Columns
-    $script:createEmailColumns
+    $script:createEmailColumns = $false
 
     #Name of Column group containing the Email Columns, and an object to contain the Email Columns
-    $script:groupName
-    $script:emailColumns
+    $script:groupName = $null
+    $script:emailColumns = $null
 
     #Credentials object to hold On-Premises credentials, so we can iterate across site collections with it
     $script:onPremisesCred
@@ -29,6 +29,7 @@ Try{
     class siteCol{
         [String]$name
         [String]$url
+        [String]$web
         [Hashtable]$documentLibraries=@{}
         [Array]$contentTypes
         [Boolean]$isSubSite
@@ -43,33 +44,41 @@ Try{
             $filler = $this.name
             Write-Host "Creating siteCol object with name '$filler'" -ForegroundColor Yellow
 
-            $this.url = $url
             $this.contentTypes = @()
 
-            #Check that we are working with a non-root site collection, otherwise we also need to rule it invalid
-            If($url -like "http*://*/sites/*"){
-                #Count forward slashes ('/'), if there are more than 4 then we need to check if this URL is for a subsite
-                $countFwdSlashes = ($this.url.ToCharArray() | Where-Object {$_ -eq '/'} | Measure-Object).Count
-            
-                If($countFwdSlashes -gt 4){
-                    $indexLastFwdSlash = $this.url.LastIndexOf('/')
-                    $indexLastFwdSlash++
-                    #Check the character after the 5th '/', if there's a character we assume this is a subsite URL
-                    If($url[$indexLastFwdSlash].Length -eq 1){
-                        $this.isSubSite = $true
+            $urlArray = $url.Split('/')
+            $rootUrl = $urlArray[0]+ '//' + $urlArray[2] + '/'
+
+            If($urlArray[3] -eq ""){
+                #This is the root site collection
+                $this.isSubSite = $false
+            }
+            ElseIf($urlArray[3] -ne "sites"){
+                #This is a subsite in the root site collection
+                For($i = 3; $i -lt $urlArray.Length; $i++){
+                    If($urlArray[$i] -ne ""){
+                        $this.web += '/' + $urlArray[$i]
                     }
-                    Else{
-                        $this.isSubSite = $false
+                }
+                $this.isSubSite = $true
+            }
+            Else{
+                #This is a site collection with a possible subweb
+                $rootUrl += $urlArray[3] + '/' + $urlArray[4] + '/'
+                For($i = 3; $i -lt $urlArray.Length; $i++){
+                    If($urlArray[$i] -ne ""){
+                        $this.web += '/' + $urlArray[$i]
                     }
+                }
+                If($urlArray[5] -ne ""){
+                    $this.isSubSite = $true
                 }
                 Else{
                     $this.isSubSite = $false
                 }
             }
-            #Not a non-root site collection, mark it invalid for use.
-            Else{
-                $this.isSubSite = $true
-            }
+
+            $this.url = $rootUrl
         }
 
         [void]addContentTypeToDocumentLibrary($contentTypeName,$docLibName){
@@ -183,7 +192,6 @@ Try{
         }
         
         Write-Host "Enter SharePoint credentials(your domain\username login for Sharepoint):" -ForegroundColor Green
-        #Set-Variable -name 'onPremisesCred' -value (Get-Credential -Credential $null) -scope Script
         $tempCred = Get-Credential -Credential $null
         $script:onPremisesCred = $tempCred
         Connect-PnPOnline -url $rootsite -Credentials $script:onPremisesCred | Out-Null
@@ -236,6 +244,7 @@ Try{
                     $script:createDefaultViews = $true
                     $script:emailViewName = Read-Host -Prompt "Please enter the name for the Email View to be created (leave blank for default 'OnePlaceMail Emails')"
                     If($script:emailViewName -eq ""){$script:emailViewName = "OnePlaceMail Emails"}
+                    Write-Host "View will be created with name $script:emailViewName in listed Document Libraries"
                 }
                 'q'{return}
             }
@@ -272,7 +281,9 @@ Try{
         
         #Get the Group name containing the OnePlaceMail Email Columns for use later per site, default is 'OnePlaceMail Solutions'
         $script:groupName = Read-Host -Prompt "Please enter the Group name containing the OnePlaceMail Email Columns in your SharePoint Site Collections (leave blank for default 'OnePlace Solutions')"
-        If($script:groupName -eq ""){$script:groupName = "OnePlace Solutions"}
+        If(-not $script:groupName){$script:groupName = "OnePlace Solutions"}
+        Write-Host "Checking for columns under group '$script:groupName'"
+        Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
 
         emailColumnsMenu
         emailViewMenu
@@ -280,14 +291,9 @@ Try{
         #Go through our siteCol objects in siteColsHT
         ForEach($site in $script:siteColsHT.Values){
             $siteName = $site.name
-            
+            $siteWeb = $site.web
             Write-Host "Working with Site Collection: $siteName" -ForegroundColor Yellow
-            If($site.isSubSite){
-                Write-Host "Subsites and objects in the Root Site Collection currently not compatible with this script due to PnP CmdLet limitation. Skipping this entry"
-                Pause
-                Continue
-            }
-
+            Write-Host "Working with Web: $siteWeb" -ForegroundColor Yellow
             #Authenticate against the Site Collection we are currently working with
             Try{
                 If($script:isSPOnline){
@@ -296,6 +302,8 @@ Try{
                 Else{
                     Connect-pnpOnline -url $site.url -Credentials $script:onPremisesCred
                 }
+                #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
+                Start-Sleep -seconds 2
             }
             Catch{
                 Write-Host "Error connecting to SharePoint Site Collection '$siteName'. Is this URL correct?" -ForegroundColor Red
@@ -314,19 +322,33 @@ Try{
 
             #Retrieve all the columns/fields for the group specified in this Site Collection, we will add these to the named Content Types shortly. If we do not get the site columns, skip this Site Collection
             $script:emailColumns = Get-PnPField -Group $script:groupName
-            If($script:emailColumns -eq $null){
+
+            If((-not $script:emailColumns) -or (-not $script:groupName)){
                 Write-Host "Email Columns not found in Site Columns group '$script:groupName' for Site Collection '$siteName'. Skipping."
                 Pause
                 Continue
             }
-            Write-Host "Columns found for group '$groupName':"
+            Write-Host "Columns found for group '$script:groupName':"
             $script:emailColumns | Format-Table
-            Write-Host "These Columns will be added to the Site Content Types listed."
+            Write-Host "These Columns will be added to the Site Content Types listed. Please enter 'yes' to confirm these are correct, or 'no' to skip this Site."
+            $skipSite = $true
+            switch(Read-Host -Prompt "Confirm"){
+                'yes'{
+                    $skipSite = $false
+                }
+                'no'{
+                    $skipSite = $true
+                }
+            }
+            If($skipSite){
+                Write-Host "Skipping Site Collection: $siteName" -ForegroundColor Yellow
+                Continue
+            }
 
             #Get the Content Type Object for 'Document' from SP, we will use this as the parent Content Type for our email Content Type
             $DocCT = Get-PnPContentType -Identity "Document"
             If($DocCT -eq $null){
-                Write-Host "Couldn't get 'Document' Site Content Type in $siteName. Skipping this Site Collection."
+                Write-Host "Couldn't get 'Document' Site Content Type in $siteName. Skipping Site Collection: $siteName"
                 Pause
                 Continue
             }
@@ -346,7 +368,7 @@ Try{
                             Add-PnPContentType -name $ct -Group "Custom Content Types" -ParentContentType $DocCT -Description "Email Content Type"
                         }
                         Catch{
-                            Write-Host "Error creating Content Type '$c't with parent of Document. Details below. Halting script." -ForegroundColor Red
+                            Write-Host "Error creating Content Type '$ct' with parent of Document. Details below. Halting script." -ForegroundColor Red
                             $_
                             Pause
                             Disconnect-PnPOnline
@@ -392,13 +414,13 @@ Try{
                 $library.contentTypes | Format-Table
 
                 Write-Host "`nEnabling Content Type Management in Document Library '$libName'." -ForegroundColor Yellow
-                Set-PnPList -Identity $libName -EnableContentTypes $true
+                Set-PnPList -Identity $libName -EnableContentTypes $true -Web $site.web
 
                 #For each Site Content Type listed for this docLib/Document Library, try to add it to said Document Library
                 Try{
                     ForEach($ct in $library.contentTypes){
                         Write-Host "Adding Site Content Type '$ct' to Document Library '$libName'..." -ForegroundColor Yellow
-                        Add-PnPContentTypeToList -List $libName -ContentType $ct
+                        Add-PnPContentTypeToList -List $libName -ContentType $ct -Web $site.web
                     }
                 }
                 Catch{
@@ -412,7 +434,7 @@ Try{
                 #Check if we are creating views
                 Try{
                     If($script:createDefaultViews){
-                        Add-PnPView -List $libName -Title $script:emailViewName -Fields @('EmDate', 'Name','EmTo', 'EmFrom', 'EmSubject') -SetAsDefault
+                        Add-PnPView -List $libName -Title $script:emailViewName -Fields @('EmDate', 'Name','EmTo', 'EmFrom', 'EmSubject') -SetAsDefault -Web $site.web
                     }
                 }
                 Catch{
