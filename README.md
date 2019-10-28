@@ -1,6 +1,6 @@
 # Deploy a OnePlace Solutions Email Content Type to multiple Site Collections and Document Libraries
 
-A script and sample CSV file to add OnePlace Solutions Email Columns to Content Types in listed Site Collections, create the Content Types where necessary, and add them to listed Document Libraries.
+A script and sample CSV file to create the OnePlace Solutions Email Columns, add them to Content Types in listed Site Collections, create the named Content Type(s) where necessary, add them to listed Document Libraries, and create a default Email view.
 
 ## Getting Started
 
@@ -8,7 +8,8 @@ Please read the entire README (this page) before using the script to ensure you 
 
 Download the SitesDocLibs.csv file above and customize it to your requirements. You will be prompted for this file by the script. If you are using Microsoft Edge, you will have to open the CSV file in Github, right click 'Raw' and 'Save Target As'. When you have finished customizing the file, please close it to ensure the script can correctly read it.
 
-Note that you need a new line for each uniquely named Site Content Type, and to define which Site Collection it will be created in, and (optionally) which Document Library it will be added to.
+Note that you need a new line for each uniquely named Site Content Type, and to define which Site Collection it will be created in, and (optionally) which Document Library it will be added to. When listing a subsite/subweb for the 'SiteUrl', the content type will be created in it's parent Site Collection, eg http://<span>contoso.sharepoint.com/sites/**SiteCollection**/SubSite.
+
 Any Site Content Types listed that already exist in your SharePoint Environment will have the Email Columns added to it (and preserve the existing columns).
 
 ### Prerequisites
@@ -26,11 +27,12 @@ Any Site Content Types listed that already exist in your SharePoint Environment 
 
 ### Restrictions
 
-* Deploying to Root Site Collections/Sub-Sites/Subwebs using this script is currently unsupported. If you list a Root Site Collection, Sub-Site or Subweb in the CSV you supply to the script, it will be identified and skipped.
 * Only works for SharePoint Online or 2016/2019 environments. SharePoint 2013 is not supported with this script.
-* Only works with Site Content Types (for both creation and adding Email Columns to existing) inheriting from the 'Document' Site Content Type.
+* Only works with Site Content Types (for both creation and adding Email Columns to existing) inheriting from the 'Document' Site Content Type. These Site Content Types can however still be added to locations within subsites/subwebs.
 
-### Installing
+### Usage
+
+Please download and modify the CSV before starting. Note that you may use this script for purely Site Column/Content Type creation by omitting any data for the Document Library column.
 
 1. Start PowerShell on your machine
 
