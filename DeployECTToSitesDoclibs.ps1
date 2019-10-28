@@ -243,12 +243,11 @@ Try{
                 'Y'{
                     $script:createDefaultViews = $true
                     $script:emailViewName = Read-Host -Prompt "Please enter the name for the Email View to be created (leave blank for default 'OnePlaceMail Emails')"
-<<<<<<< HEAD
+
                     If($script:emailViewName -eq ""){$script:emailViewName = "OnePlaceMail Emails"}
                     Write-Host "View will be created with name $script:emailViewName in listed Document Libraries"
-=======
+
                     If(-not $script:emailViewName){$script:emailViewName = "OnePlaceMail Emails"}
->>>>>>> 6f3fe0bbfd60cf15bf195fc48668217d60b74269
                 }
                 'q'{return}
             }
@@ -286,11 +285,8 @@ Try{
         #Get the Group name containing the OnePlaceMail Email Columns for use later per site, default is 'OnePlaceMail Solutions'
         $script:groupName = Read-Host -Prompt "Please enter the Group name containing the OnePlaceMail Email Columns in your SharePoint Site Collections (leave blank for default 'OnePlace Solutions')"
         If(-not $script:groupName){$script:groupName = "OnePlace Solutions"}
-<<<<<<< HEAD
         Write-Host "Checking for columns under group '$script:groupName'"
         Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
-=======
->>>>>>> 6f3fe0bbfd60cf15bf195fc48668217d60b74269
 
         emailColumnsMenu
         emailViewMenu
@@ -329,10 +325,6 @@ Try{
 
             #Retrieve all the columns/fields for the group specified in this Site Collection, we will add these to the named Content Types shortly. If we do not get the site columns, skip this Site Collection
             $script:emailColumns = Get-PnPField -Group $script:groupName
-<<<<<<< HEAD
-
-=======
->>>>>>> 6f3fe0bbfd60cf15bf195fc48668217d60b74269
             If((-not $script:emailColumns) -or (-not $script:groupName)){
                 Write-Host "Email Columns not found in Site Columns group '$script:groupName' for Site Collection '$siteName'. Skipping."
                 Pause
@@ -340,7 +332,6 @@ Try{
             }
             Write-Host "Columns found for group '$script:groupName':"
             $script:emailColumns | Format-Table
-<<<<<<< HEAD
             Write-Host "These Columns will be added to the Site Content Types listed. Please enter 'yes' to confirm these are correct, or 'no' to skip this Site."
             $skipSite = $true
             switch(Read-Host -Prompt "Confirm"){
@@ -356,11 +347,9 @@ Try{
                 Continue
             }
 
-=======
             Write-Host "These Columns will be added to the Site Content Types listed."
             Pause
             
->>>>>>> 6f3fe0bbfd60cf15bf195fc48668217d60b74269
             #Get the Content Type Object for 'Document' from SP, we will use this as the parent Content Type for our email Content Type
             $DocCT = Get-PnPContentType -Identity "Document"
             If($DocCT -eq $null){
