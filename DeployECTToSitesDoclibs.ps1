@@ -159,7 +159,7 @@ Try{
             Write-Host "Completed Enumerating Site Collections and Document Libraries from CSV file!" -ForegroundColor Green
         }
         Catch{
-            Write-Host "Error parsing CSV file. Is this filepath correct?" -ForegroundColor Red
+            Write-Host "Error parsing CSV file. Is this filepath for a a valid CSV file?" -ForegroundColor Red
             $csvFile
             Write-Host "Other Details below. Halting script." -ForegroundColor Red
             $_
@@ -245,7 +245,7 @@ Try{
                     $script:emailViewName = Read-Host -Prompt "Please enter the name for the Email View to be created (leave blank for default 'OnePlaceMail Emails')"
 
                     If($script:emailViewName -eq ""){$script:emailViewName = "OnePlaceMail Emails"}
-                    Write-Host "View will be created with name $script:emailViewName in listed Document Libraries"
+                    Write-Host "View will be created with name $script:emailViewName in listed Document Libraries in the CSV"
 
                     If(-not $script:emailViewName){$script:emailViewName = "OnePlaceMail Emails"}
                 }
@@ -347,7 +347,7 @@ Try{
                 Continue
             }
 
-            Write-Host "These Columns will be added to the Site Content Types listed."
+            Write-Host "These Columns will be added to the Site Content Types listed in the CSV."
             Pause
             
             #Get the Content Type Object for 'Document' from SP, we will use this as the parent Content Type for our email Content Type
