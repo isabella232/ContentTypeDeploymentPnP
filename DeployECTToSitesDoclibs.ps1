@@ -178,7 +178,7 @@ Try{
         #Connect to site collection
         $adminSharePointUrl = "https://$tenant-admin.sharepoint.com"
         Write-Host "Enter SharePoint credentials(your email address for SharePoint Online):" -ForegroundColor Green  
-        Connect-pnpOnline -url $adminSharePointUrl -SPOManagementShell
+        Connect-SPOService -Url $adminSharePointUrl
         #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
         Start-Sleep -Seconds 3
     }
