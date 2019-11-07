@@ -332,13 +332,13 @@ Try{
             }
             Write-Host "Columns found for group '$script:groupName':"
             $script:emailColumns | Format-Table
-            Write-Host "These Columns will be added to the Site Content Types listed. Please enter 'yes' to confirm these are correct, or 'no' to skip this Site."
+            Write-Host "These Columns will be added to the Site Content Types listed. Please enter 'Y' to confirm these are correct, or 'N' to skip this Site."
             $skipSite = $true
             switch(Read-Host -Prompt "Confirm"){
-                'yes'{
+                'Y'{
                     $skipSite = $false
                 }
-                'no'{
+                'N'{
                     $skipSite = $true
                 }
             }
