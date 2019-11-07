@@ -129,7 +129,15 @@ Try{
     #Grabs the CSV file and enumerate it into siteColHT as siteCol and docLib objects to work with later
     function EnumerateSitesDocLibs([string]$csvFile){
         If($csvFile -eq ""){
-             $csvFile = Read-Host -Prompt "Please enter the local path to the CSV containing the Site Collections and Document Libraries to create the Content Types in"
+             Write-Host "Please select your customized CSV containing the Site Collections and Document Libraries to create the Content Types in"
+             Start-Sleep -seconds 1
+             $FileBrowser = New-Object System.Windows.Forms.OpenFileDialog -Property @{ 
+                InitialDirectory = [Environment]::GetFolderPath('Desktop') 
+                Filter = 'Comma Separates Values (*.csv)|*.csv'
+                Title = 'Select your CSV file'
+            }
+            $null = $FileBrowser.ShowDialog()
+            $csvFile = $FileBrowser.FileName
         }
 
         $script:siteColsHT = [hashtable]::new
