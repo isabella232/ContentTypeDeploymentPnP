@@ -131,6 +131,10 @@ Try{
         If($csvFile -eq ""){
              $csvFile = Read-Host -Prompt "Please enter the local path to the CSV containing the Site Collections and Document Libraries to create the Content Types in"
         }
+
+        $script:siteColsHT = [hashtable]::new
+        $script:siteColsHT = @{}
+
         Try{
             $csv = Import-Csv -Path $csvFile
 
@@ -457,7 +461,7 @@ Try{
     #Start of Script
     #----------------------------------------------------------------
 
-    do{ 
+    do{
         showEnvMenu 
         $input = Read-Host "Please select your SharePoint Environment" 
         switch ($input) { 
