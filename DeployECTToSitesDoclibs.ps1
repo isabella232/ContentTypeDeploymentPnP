@@ -280,9 +280,17 @@ Try{
             switch ($input) { 
                 'N'{
                     $script:createEmailColumns = $false
+                    #Get the Group name containing the OnePlaceMail Email Columns for use later per site, default is 'OnePlaceMail Solutions'
+                    $script:groupName = Read-Host -Prompt "Please enter the Group name containing the OnePlaceMail Email Columns in your SharePoint Site Collections (leave blank for default 'OnePlace Solutions')"
+                    If(-not $script:groupName){$script:groupName = "OnePlace Solutions"}
+                    Write-Host "Will check for columns under group '$script:groupName'"
                 }
                 'Y'{
                     $script:createEmailColumns = $true
+                    #Get the Group name we will create the OnePlaceMail Email Columns in for use later per site, default is 'OnePlaceMail Solutions'
+                    $script:groupName = Read-Host -Prompt "Please enter the Group name to create the OnePlaceMail Email Columns in, in your SharePoint Site Collections (leave blank for default 'OnePlace Solutions')"
+                    If(-not $script:groupName){$script:groupName = "OnePlace Solutions"}
+                    Write-Host "Will create and check for columns under group '$script:groupName'"
                 }
                 'q'{return}
             }
@@ -293,12 +301,6 @@ Try{
     }
 
     function Deploy{
-        Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
-        
-        #Get the Group name containing the OnePlaceMail Email Columns for use later per site, default is 'OnePlaceMail Solutions'
-        $script:groupName = Read-Host -Prompt "Please enter the Group name containing the OnePlaceMail Email Columns in your SharePoint Site Collections (leave blank for default 'OnePlace Solutions')"
-        If(-not $script:groupName){$script:groupName = "OnePlace Solutions"}
-        Write-Host "Checking for columns under group '$script:groupName'"
         Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
 
         emailColumnsMenu
