@@ -454,11 +454,12 @@ Try{
                 #Check if we are creating views
                 Try{
                     If($script:createDefaultViews){
+                        Write-Host "Adding Default View '$script:emailViewName' to Document Library '$libName'."
                         Add-PnPView -List $libName -Title $script:emailViewName -Fields @('EmDate', 'Name','EmTo', 'EmFrom', 'EmSubject') -SetAsDefault -Web $site.web
                     }
                 }
                 Catch{
-                    Write-Host "Error adding Default View'$script:emailViewName' to Document Library '$libName'. Details below. Halting script." -ForegroundColor Red
+                    Write-Host "Error adding Default View '$script:emailViewName' to Document Library '$libName'. Details below. Halting script." -ForegroundColor Red
                     $_
                     Pause
                     Disconnect-PnPOnline
