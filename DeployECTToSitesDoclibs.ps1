@@ -226,7 +226,20 @@ Try{
         $WebClient.DownloadFile( $Url, $Path )   
         #Apply xml provisioning template to SharePoint
         Write-Host "Applying email columns template to SharePoint:" $SharePointUrl -ForegroundColor Green 
-        Apply-PnPProvisioningTemplate -path $Path
+        
+        $rawXml = Get-Content $Path
+        
+        #To fix certain compatibility issues between site template types, we will just pull the Field XML from the template
+        ForEach($line in $rawXml){
+            Try{
+                If(($line.ToString() -match 'Name="Em') -or ($line.ToString() -match 'Name="Doc')){
+                    Add-PnPFieldFromXml -fieldxml $line -ErrorAction Stop
+                }
+            }
+            Catch {
+                Write-Host $_.Exception.Message
+            }
+        }
     }
 
     #Starting menu for selection between SharePoint Online or SharePoint On-Premises, or exiting the script
@@ -243,6 +256,7 @@ Try{
 
     #Menu to check if the user wants us to create a default Email View in the Document Libraries
     function emailViewMenu{
+        $script:emailViewName = $null
         do{ 
             Write-Host "Would you like to create an Email View in your Document Libraries?"
             Write-Host "N: No" 
@@ -271,6 +285,7 @@ Try{
     }
 
     function emailColumnsMenu{
+        $script:groupName = $null
         do{ 
             Write-Host "Would you like to automatically add the OnePlaceMail Email Columns to the listed Site Collections?"
             Write-Host "N: No" 
@@ -361,9 +376,6 @@ Try{
                 Write-Host "Skipping Site Collection: $siteName" -ForegroundColor Yellow
                 Continue
             }
-
-            Write-Host "These Columns will be added to the Site Content Types listed in the CSV."
-            Pause
             
             #Get the Content Type Object for 'Document' from SP, we will use this as the parent Content Type for our email Content Type
             $DocCT = Get-PnPContentType -Identity "Document"
