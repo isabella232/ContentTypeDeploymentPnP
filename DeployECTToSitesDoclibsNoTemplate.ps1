@@ -235,12 +235,8 @@ Try{
                     Add-PnPFieldFromXml -fieldxml $line -ErrorAction Stop
                 }
             }
-            Catch [Microsoft.SharePoint.Client.ServerException]{
-                Write-Host $_.Exception.Message -ForegroundColor Yellow
-
-            }
             Catch {
-                Write-Host $_.Message
+                Write-Host $_.Exception.Message
             }
         }
     }
@@ -259,6 +255,7 @@ Try{
 
     #Menu to check if the user wants us to create a default Email View in the Document Libraries
     function emailViewMenu{
+        $script:emailViewName = $null
         do{ 
             Write-Host "Would you like to create an Email View in your Document Libraries?"
             Write-Host "N: No" 
@@ -287,6 +284,7 @@ Try{
     }
 
     function emailColumnsMenu{
+        $script:groupName = $null
         do{ 
             Write-Host "Would you like to automatically add the OnePlaceMail Email Columns to the listed Site Collections?"
             Write-Host "N: No" 
@@ -377,9 +375,6 @@ Try{
                 Write-Host "Skipping Site Collection: $siteName" -ForegroundColor Yellow
                 Continue
             }
-
-            Write-Host "These Columns will be added to the Site Content Types listed in the CSV."
-            Pause
             
             #Get the Content Type Object for 'Document' from SP, we will use this as the parent Content Type for our email Content Type
             $DocCT = Get-PnPContentType -Identity "Document"
