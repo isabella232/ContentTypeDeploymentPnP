@@ -226,7 +226,20 @@ Try{
         $WebClient.DownloadFile( $Url, $Path )   
         #Apply xml provisioning template to SharePoint
         Write-Host "Applying email columns template to SharePoint:" $SharePointUrl -ForegroundColor Green 
-        Apply-PnPProvisioningTemplate -path $Path
+        
+        $rawXml = Get-Content $Path
+        
+        #To fix certain compatibility issues between site template types, we will just pull the Field XML from the template
+        ForEach($line in $rawXml){
+            Try{
+                If($line.ToString() -match 'Name="Em'){
+                    Add-PnPFieldFromXml -fieldxml $line -ErrorAction Stop
+                }
+            }
+            Catch {
+                Write-Host $_.Exception.Message
+            }
+        }
     }
 
     #Starting menu for selection between SharePoint Online or SharePoint On-Premises, or exiting the script
