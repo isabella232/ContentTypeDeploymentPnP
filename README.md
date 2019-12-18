@@ -6,7 +6,7 @@ A script and sample CSV file to create the OnePlace Solutions Email Columns, add
 
 Please read the entire README (this page) before using the script to ensure you understand it's prerequisites and considerations/limitations.
 
-Download the SitesDocLibs.csv file above and customize it to your requirements. You will be prompted for this file by the script. If you are using Microsoft Edge, you will have to open the CSV file in Github, right click 'Raw' and 'Save Target As'. 
+Download the [SitesDocLibs.csv](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/raw/master/SitesDocLibs.csv) file above and customize it to your requirements. You will be prompted for this file by the script. If you are using Microsoft Edge, you will have to open the CSV file in Github, right click 'Raw' and 'Save Target As'. 
 
 Notes regarding the CSV file:
 * You need a new line for each uniquely named Site Content Type, and to define which Site Collection it will be created in, and (optionally) which Document Library it will be added to. 
@@ -38,13 +38,37 @@ When you have finished customizing the file, please save and close it to ensure 
 
 Please download and modify the CSV before starting. 
 
-1. Start PowerShell on your machine
+1. Download the CSV file and modify it to suit your deployment requirements. The SitesDocLibs.CSV file already contains an example deployment of the Email Content Type 'OnePlaceMail Email' to the 'Emails' Document Library in the 'Marketing' Site Collection, and two Email Content Types to the 'Emails' Document Library in the 'Accounting' Site Collection; 'ACC Incoming Email' and 'ACC Outgoing Email'. If these Content Types do not exist, the script will create them. Save this file and note it's location.
 
-2. Run the below command to invoke the current(master) version of the script:
+   ![EditCSV](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/blob/master/README-Images/EditCSV.PNG)
 
-```
-Invoke-Expression (New-Object Net.WebClient).DownloadString(‘https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/raw/master/DeployECTToSitesDoclibs.ps1’)
-```
+2. Start PowerShell (as Administrator) on your machine:
+   ![StartPowerShell](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/blob/master/README-Images/StartPowerShell.png)
+
+3. Run the below command to invoke the current(master) version of the script:
+
+   ```
+   Invoke-Expression (New-Object Net.WebClient).DownloadString(‘https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/raw/master/DeployECTToSitesDoclibs.ps1’)
+   ```
+   ![InvokeExpression](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/blob/master/README-Images/InvokeExpression.png)
+
+4. Select your SharePoint Environment, 1 for SharePoint Online/365, or 2 for SharePoint 2016/2019 On-Premises
+   ![MainMenu](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/blob/master/README-Images/MainMenu.png)
+   
+5. Enter the name of your Office 365 Tenant to authenticate against the SharePoint Administration Site using the SharePoint Online Management Shell. This is required to iterate across the Site Collections you have listed in the CSV file. For On-Premises, this step will prompt you for your Root Site Collection instead. You can also see above how the script has parsed the CSV file.
+   ![TenantPrompt](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/blob/master/README-Images/TenantPrompt.png)
+
+6. If you would like to automatically create the OnePlaceMail Email Columns in the Site Collections listed in the CSV, you can opt to do so now. Both options will prompt you for the Column Group Name that contains (or will contain) the OnePlaceMail Email Columns. Default name is 'OnePlace Solutions'
+   ![CreateColumnsPrompt](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/blob/master/README-Images/CreateColumnsPrompt.png)
+
+7. If you would like to automatically create a default Email View in the Document Libraries listed in the CSV, you can also opt to do so now. This will create a default view with the email columns: 'EmDate', 'Name','EmTo', 'EmFrom', 'EmSubject'. Default name is 'OnePlaceMail Emails'.
+  ![EmailViewPrompt](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/blob/master/README-Images/EmailViewPrompt.PNG)
+
+8. Once the email columns have been created or found in your Site Collection(s), you will be prompted to confirm these are the columns you intend to add to the Site Content Types listed in the CSV (and by extension your Document Libraries listed). Type 'Y' and press Enter to continue if they are correct. The pictured example contains all the OnePlaceSolutions Email Columns.
+  ![ColumnsFoundConfirm](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/blob/master/README-Images/ColumnsFoundConfirm.PNG)
+
+9. The script will now add (and create if opted for) the Email Columns to the Email Content Types listed in the CSV, and add those Email Content Types to the Document Libraries listed in the CSV. If you opted for a default Email View to be created, it will also be done now. In this example the script has created the two Content Types listed in the sample CSV, added the Email Columns, and then added those Content Types to the Document Library listed in the sample CSV
+  ![FinishDeployment](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/blob/master/README-Images/FinishDeployment.PNG)
 
 ## License
 
