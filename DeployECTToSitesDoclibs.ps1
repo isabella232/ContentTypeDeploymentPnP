@@ -232,7 +232,7 @@ Try{
         #To fix certain compatibility issues between site template types, we will just pull the Field XML from the template
         ForEach($line in $rawXml){
             Try{
-                If($line.ToString() -match 'Name="Em'){
+                If(($line.ToString() -match 'Name="Em') -or ($line.ToString() -match 'Name="Doc')){
                     Add-PnPFieldFromXml -fieldxml $line -ErrorAction Stop
                 }
             }
