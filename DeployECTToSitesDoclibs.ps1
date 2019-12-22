@@ -467,7 +467,7 @@ Try{
                 Try{
                     If($script:createDefaultViews){
                         Write-Host "Adding Default View '$script:emailViewName' to Document Library '$libName'."
-                        Add-PnPView -List $libName -Title $script:emailViewName -Fields @('EmDate', 'Name','EmTo', 'EmFrom', 'EmSubject') -SetAsDefault -Web $site.web
+                        Add-PnPView -List $libName -Title $script:emailViewName -Fields @('EmDate', 'Name','EmToName', 'EmFromName', 'EmSubject') -SetAsDefault -Web $site.web
                     }
                 }
                 Catch{
