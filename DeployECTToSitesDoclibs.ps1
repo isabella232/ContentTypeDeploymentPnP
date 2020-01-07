@@ -54,7 +54,7 @@ Try{
                 #This is the root site collection
                 $this.isSubSite = $false
             }
-            ElseIf($urlArray[3] -ne "sites"){
+            ElseIf(($urlArray[3] -ne "sites") -and ($urlArray[3] -ne "teams")){
                 #This is a subsite in the root site collection
                 For($i = 3; $i -lt $urlArray.Length; $i++){
                     If($urlArray[$i] -ne ""){
@@ -71,7 +71,7 @@ Try{
                         $this.web += '/' + $urlArray[$i]
                     }
                 }
-                If($urlArray[5] -ne ""){
+                If($urlArray[5].Count -ne 0){
                     $this.isSubSite = $true
                 }
                 Else{
@@ -225,7 +225,7 @@ Try{
         Write-Host "Downloading provisioning xml template:" $Path -ForegroundColor Green 
         $WebClient.DownloadFile( $Url, $Path )   
         #Apply xml provisioning template to SharePoint
-        Write-Host "Applying email columns template to SharePoint:" $SharePointUrl -ForegroundColor Green 
+        Write-Host "Applying email columns template to SharePoint:" $siteCollection -ForegroundColor Green 
         
         $rawXml = Get-Content $Path
         
@@ -325,6 +325,7 @@ Try{
         ForEach($site in $script:siteColsHT.Values){
             $siteName = $site.name
             $siteWeb = $site.web
+            $siteUrl = $site.url
             Write-Host "Working with Site Collection: $siteName" -ForegroundColor Yellow
             Write-Host "Working with Web: $siteWeb" -ForegroundColor Yellow
             #Authenticate against the Site Collection we are currently working with
@@ -350,6 +351,7 @@ Try{
 
             #Check if we are creating email columns, if so, do so now
             If($script:createEmailColumns){
+                
                 CreateEmailColumns -siteCollection $site.url
             }
 
