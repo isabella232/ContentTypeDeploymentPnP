@@ -271,10 +271,8 @@ Try{
                     $script:createDefaultViews = $true
                     $script:emailViewName = Read-Host -Prompt "Please enter the name for the Email View to be created (leave blank for default 'OnePlaceMail Emails')"
 
-                    If($script:emailViewName -eq ""){$script:emailViewName = "OnePlaceMail Emails"}
+                    If($script:emailViewName.Length -eq 0){$script:emailViewName = "OnePlaceMail Emails"}
                     Write-Host "View will be created with name $script:emailViewName in listed Document Libraries in the CSV"
-
-                    If(-not $script:emailViewName){$script:emailViewName = "OnePlaceMail Emails"}
                 }
                 'q'{return}
             }
@@ -297,14 +295,14 @@ Try{
                     $script:createEmailColumns = $false
                     #Get the Group name containing the OnePlaceMail Email Columns for use later per site, default is 'OnePlaceMail Solutions'
                     $script:groupName = Read-Host -Prompt "Please enter the Group name containing the OnePlaceMail Email Columns in your SharePoint Site Collections (leave blank for default 'OnePlace Solutions')"
-                    If(-not $script:groupName){$script:groupName = "OnePlace Solutions"}
+                    If($script:groupName.Length -eq 0){$script:groupName = "OnePlace Solutions"}
                     Write-Host "Will check for columns under group '$script:groupName'"
                 }
                 'Y'{
                     $script:createEmailColumns = $true
                     #Get the Group name we will create the OnePlaceMail Email Columns in for use later per site, default is 'OnePlaceMail Solutions'
                     $script:groupName = Read-Host -Prompt "Please enter the Group name to create the OnePlaceMail Email Columns in, in your SharePoint Site Collections (leave blank for default 'OnePlace Solutions')"
-                    If(-not $script:groupName){$script:groupName = "OnePlace Solutions"}
+                    If($script:groupName.Length -eq 0){$script:groupName = "OnePlace Solutions"}
                     Write-Host "Will create and check for columns under group '$script:groupName'"
                 }
                 'q'{return}
