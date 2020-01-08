@@ -323,7 +323,6 @@ Try{
         ForEach($site in $script:siteColsHT.Values){
             $siteName = $site.name
             $siteWeb = $site.web
-            $siteUrl = $site.url
             Write-Host "Working with Site Collection: $siteName" -ForegroundColor Yellow
             Write-Host "Working with Web: $siteWeb" -ForegroundColor Yellow
             #Authenticate against the Site Collection we are currently working with
