@@ -54,7 +54,7 @@ Try{
                 #This is the root site collection
                 $this.isSubSite = $false
             }
-            ElseIf($urlArray[3] -ne "sites"){
+            ElseIf(($urlArray[3] -ne "sites") -and ($urlArray[3] -ne "teams")){
                 #This is a subsite in the root site collection
                 For($i = 3; $i -lt $urlArray.Length; $i++){
                     If($urlArray[$i] -ne ""){
@@ -71,7 +71,7 @@ Try{
                         $this.web += '/' + $urlArray[$i]
                     }
                 }
-                If($urlArray[5] -ne ""){
+                If($urlArray[5].Count -ne 0){
                     $this.isSubSite = $true
                 }
                 Else{
@@ -150,7 +150,7 @@ Try{
             Write-Host "Enumerating Site Collections and Document Libraries from CSV file." -ForegroundColor Yellow
             foreach ($element in $csv){
                 $csv_siteName = $element.SiteName
-                $csv_siteUrl = $element.SiteUrl
+                $csv_siteUrl = $element.SiteUrl -replace '\s','' #remove any whitespace from URL
                 $csv_docLib = $element.DocLib
                 $csv_contentType = $element.CTName
 
@@ -225,7 +225,7 @@ Try{
         Write-Host "Downloading provisioning xml template:" $Path -ForegroundColor Green 
         $WebClient.DownloadFile( $Url, $Path )   
         #Apply xml provisioning template to SharePoint
-        Write-Host "Applying email columns template to SharePoint:" $SharePointUrl -ForegroundColor Green 
+        Write-Host "Applying email columns template to SharePoint:" $siteCollection -ForegroundColor Green 
         
         $rawXml = Get-Content $Path
         
@@ -271,10 +271,8 @@ Try{
                     $script:createDefaultViews = $true
                     $script:emailViewName = Read-Host -Prompt "Please enter the name for the Email View to be created (leave blank for default 'OnePlaceMail Emails')"
 
-                    If($script:emailViewName -eq ""){$script:emailViewName = "OnePlaceMail Emails"}
+                    If($script:emailViewName.Length -eq 0){$script:emailViewName = "OnePlaceMail Emails"}
                     Write-Host "View will be created with name $script:emailViewName in listed Document Libraries in the CSV"
-
-                    If(-not $script:emailViewName){$script:emailViewName = "OnePlaceMail Emails"}
                 }
                 'q'{return}
             }
@@ -297,14 +295,14 @@ Try{
                     $script:createEmailColumns = $false
                     #Get the Group name containing the OnePlaceMail Email Columns for use later per site, default is 'OnePlaceMail Solutions'
                     $script:groupName = Read-Host -Prompt "Please enter the Group name containing the OnePlaceMail Email Columns in your SharePoint Site Collections (leave blank for default 'OnePlace Solutions')"
-                    If(-not $script:groupName){$script:groupName = "OnePlace Solutions"}
+                    If($script:groupName.Length -eq 0){$script:groupName = "OnePlace Solutions"}
                     Write-Host "Will check for columns under group '$script:groupName'"
                 }
                 'Y'{
                     $script:createEmailColumns = $true
                     #Get the Group name we will create the OnePlaceMail Email Columns in for use later per site, default is 'OnePlaceMail Solutions'
                     $script:groupName = Read-Host -Prompt "Please enter the Group name to create the OnePlaceMail Email Columns in, in your SharePoint Site Collections (leave blank for default 'OnePlace Solutions')"
-                    If(-not $script:groupName){$script:groupName = "OnePlace Solutions"}
+                    If($script:groupName.Length -eq 0){$script:groupName = "OnePlace Solutions"}
                     Write-Host "Will create and check for columns under group '$script:groupName'"
                 }
                 'q'{return}
@@ -350,6 +348,7 @@ Try{
 
             #Check if we are creating email columns, if so, do so now
             If($script:createEmailColumns){
+                
                 CreateEmailColumns -siteCollection $site.url
             }
 
