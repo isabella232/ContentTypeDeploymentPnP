@@ -150,7 +150,7 @@ Try{
             Write-Host "Enumerating Site Collections and Document Libraries from CSV file." -ForegroundColor Yellow
             foreach ($element in $csv){
                 $csv_siteName = $element.SiteName
-                $csv_siteUrl = $element.SiteUrl
+                $csv_siteUrl = $element.SiteUrl -replace '\s','' #remove any whitespace from URL
                 $csv_docLib = $element.DocLib
                 $csv_contentType = $element.CTName
 
