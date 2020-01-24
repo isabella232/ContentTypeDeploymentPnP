@@ -6,10 +6,11 @@ A script and sample CSV file to create the OnePlace Solutions Email Columns, add
 
 Please read the entire README (this page) before using the script to ensure you understand it's prerequisites and considerations/limitations.
 
-Download the [SitesDocLibs.csv](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/raw/master/SitesDocLibs.csv) file above and customize it to your requirements. You will be prompted for this file by the script. If you are using Microsoft Edge, you will have to open the CSV file in Github, right click 'Raw' and 'Save Target As'. 
+Download the 'SitesDocLibs.csv' file (Right Click this [link](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/raw/master/SitesDocLibs.csv) and select 'Save target as' or 'Save link as') and customize it to your requirements per the notes below. You will be prompted for this file by the script.
 
 Notes regarding the CSV file:
-* You need a new line for each uniquely named Site Content Type, and to define which Site Collection it will be created in, and (optionally) which Document Library it will be added to. 
+* The SitesDocLibs.CSV file already contains an example deployment for the 'Contoso' Tenant. If run, it would deploy the Email Content Type 'OnePlaceMail Email' to the 'Emails' Document Library in the 'Marketing' Site Collection, and two Email Content Types to the 'Emails' Document Library in the 'Accounting' Site Collection; 'ACC Incoming Email' and 'ACC Outgoing Email'. If these Content Types do not exist, the script would create them.
+* You need a new line for each uniquely named Site Content Type, define which Site Collection it will be created in, and (optionally) which Document Library it will be added to. 
 * When listing a subsite/subweb for the 'SiteUrl', the content type will be created in it's parent Site Collection, eg http://<span>contoso.sharepoint.com/sites/**SiteCollection**/SubSite. You can still list a Document Library within that Subsite to have the Site Content Type added to.
 * You may use this script for purely Site Column/Content Type creation by omitting any data for the Document Library column.
 * Any Site Content Types listed in the CSV that already exist in your SharePoint Environment will have the Email Columns added to it (and preserve the existing columns).
@@ -36,9 +37,7 @@ When you have finished customizing the file, please save and close it to ensure 
 
 ### Usage
 
-Please download and modify the CSV before starting. 
-
-1. Download the CSV file and modify it to suit your deployment requirements. The SitesDocLibs.CSV file already contains an example deployment of the Email Content Type 'OnePlaceMail Email' to the 'Emails' Document Library in the 'Marketing' Site Collection, and two Email Content Types to the 'Emails' Document Library in the 'Accounting' Site Collection; 'ACC Incoming Email' and 'ACC Outgoing Email'. If these Content Types do not exist, the script will create them. Save this file and note it's location.
+1. Download the CSV file and modify it to suit your deployment requirements. 
 
    ![EditCSV](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/blob/master/README-Images/EditCSV.PNG)
 
