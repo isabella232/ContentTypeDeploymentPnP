@@ -6,7 +6,7 @@ A script and sample CSV file to create the OnePlace Solutions Email Columns, add
 
 Please read the entire README (this page) before using the script to ensure you understand it's prerequisites and considerations/limitations.
 
-Download the 'SitesDocLibs.csv' file (Right Click this [link](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/raw/master/SitesDocLibs.csv) and select 'Save target as' or 'Save link as') and customize it to your requirements per the notes below. You will be prompted for this file by the script.
+Download the 'SitesDocLibs.csv' file ([Right Click this link](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/raw/master/SitesDocLibs.csv) and select 'Save target as' or 'Save link as') and customize it to your requirements per the notes below. You will be prompted for this file by the script.
 
 Notes regarding the CSV file:
 * The SitesDocLibs.CSV file already contains an example deployment for the 'Contoso' Tenant. If run, it would deploy the Email Content Type 'OnePlaceMail Email' to the 'Emails' Document Library in the 'Marketing' Site Collection, and two Email Content Types to the 'Emails' Document Library in the 'Accounting' Site Collection; 'ACC Incoming Email' and 'ACC Outgoing Email'. If these Content Types do not exist, the script would create them.
