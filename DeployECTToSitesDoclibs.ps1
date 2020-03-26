@@ -10,21 +10,26 @@ Try{
     $script:siteColsHT = @{}
 
     #Flag for whether we are working in SharePoint Online or on-premises.
-    $script:isSPOnline = $true
+    [boolean]$script:isSPOnline = $true
 
     #Flag for whether we create default email views or not, and if so what name to use
-    $script:createDefaultViews = $false
-    $script:emailViewName = $null
+    [boolean]$script:createDefaultViews = $false
+    [string]$script:emailViewName = $null
 
     #Flag for whether we automatically create the OnePlaceMail Email Columns
-    $script:createEmailColumns = $false
+    [boolean]$script:createEmailColumns = $false
 
     #Name of Column group containing the Email Columns, and an object to contain the Email Columns
-    $script:groupName = $null
+    [string]$script:groupName = $null
     $script:emailColumns = $null
 
     #Credentials object to hold On-Premises credentials, so we can iterate across site collections with it
     $script:onPremisesCred
+
+    #Holds our OAuth 2.0 token if using SharePoint Online
+    [string]$script:token
+
+    [boolean]$script:emailColumnsXmlDownloaded = $false
 
     #Contains all the data we need relating to the Site Collection we are working with, including the Document Libraries and the Site Content Type names
     class siteCol{
@@ -185,7 +190,7 @@ Try{
     function ConnectToSharePointOnlineAdmin([string]$tenant){
         #Prompt for SharePoint Management Site Url     
         If($tenant -eq ""){
-            $tenant = Read-Host -Prompt "Please enter the name of your Office 365 organization/tenant, eg for 'https://contoso.sharepoint.com' just enter 'contoso'."
+            $tenant = Read-Host -Prompt "Please enter the name of your SharePoint Online tenant, eg for 'https://contoso.sharepoint.com' just enter 'contoso'."
         } 
 
         #Connect to site collection
@@ -194,6 +199,39 @@ Try{
         Connect-SPOService -Url $adminSharePointUrl
         #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
         Start-Sleep -Seconds 3
+    }
+
+    #Facilitates connection to the SharePoint Online site collections through an OAUTH 2.0 token
+    function ConnectToSharePointOnlineOAuth([string]$tenant){
+        #Prompt for SharePoint Root Site Url     
+        If($tenant -eq ""){
+            $tenant = Read-Host -Prompt "Please enter the name of your SharePoint Online tenant, eg for 'https://contoso.sharepoint.com' just enter 'contoso'."
+        } 
+
+        $rootSharePointUrl = "https://$tenant.sharepoint.com"
+        Write-Host "Please authenticate against your Office 365 tenant by pasting the code copied to your clipboard and signing in. App access must be granted to the Office 365 PnP Management Shell to continue." -ForegroundColor Green  
+        Try{
+            Connect-PnPOnline -url $rootSharePointUrl -PnPO365ManagementShell -LaunchBrowser
+        }
+        Catch{
+            $exMessage = $($_.Exception.Message)
+            If($exMessage -notmatch 'The handle is invalid'){
+                Throw $_
+            }
+        }
+
+        #workaround for PnP handling the token. Login to the root site normally and retrieve the token from there, then we will test it.
+        Write-Host "Enter SharePoint credentials(your email address for SharePoint Online):`n" -ForegroundColor Green
+        Connect-PnPOnline -url $rootSharePointUrl -UseWebLogin
+        $script:token = Get-PnPAccessToken
+        Disconnect-PnPOnline
+
+        Write-Host "Testing OAuth token to ensure we don't have an issue later...`n"
+        Connect-PnPOnline -url $rootSharePointUrl -AccessToken $script:token
+        $web = Get-PnPWeb
+        If($null -ne $web){
+            Write-Host "Success!`n" -ForegroundColor Green
+        }
     }
 
     #Facilitates connection to the on premises site collections through the root site collection
@@ -216,14 +254,18 @@ Try{
             $siteCollection = Read-Host -Prompt "Please enter the Site Collection URL to add the OnePlace Solutions Email Columns to"
         }
         
-        #From 'https://github.com/OnePlaceSolutions/EmailColumnsPnP/blob/master/installEmailColumns.ps1'
-        #Download xml provisioning template
-        $WebClient = New-Object System.Net.WebClient   
-        $Url = "https://raw.githubusercontent.com/OnePlaceSolutions/EmailColumnsPnP/master/email-columns.xml"    
-        $Path = "$env:temp\email-columns.xml"
+        If($false -eq $script:emailColumnsXmlDownloaded){
+            #From 'https://github.com/OnePlaceSolutions/EmailColumnsPnP/blob/master/installEmailColumns.ps1'
+            #Download xml provisioning template
+            $WebClient = New-Object System.Net.WebClient   
+            $Url = "https://raw.githubusercontent.com/OnePlaceSolutions/EmailColumnsPnP/master/email-columns.xml"    
+            $Path = "$env:temp\email-columns.xml"
 
-        Write-Host "Downloading provisioning xml template:" $Path -ForegroundColor Green 
-        $WebClient.DownloadFile( $Url, $Path )   
+            Write-Host "Downloading provisioning xml template:" $Path -ForegroundColor Green 
+            $WebClient.DownloadFile( $Url, $Path )
+            $script:emailColumnsXmlDownloaded = $true
+        }
+
         #Apply xml provisioning template to SharePoint
         Write-Host "Applying email columns template to SharePoint:" $siteCollection -ForegroundColor Green 
         
@@ -269,9 +311,9 @@ Try{
                 }
                 'Y'{
                     $script:createDefaultViews = $true
-                    $script:emailViewName = Read-Host -Prompt "Please enter the name for the Email View to be created (leave blank for default 'OnePlaceMail Emails')"
+                    $script:emailViewName = Read-Host -Prompt "Please enter the name for the Email View to be created (leave blank for default 'Emails')"
 
-                    If($script:emailViewName.Length -eq 0){$script:emailViewName = "OnePlaceMail Emails"}
+                    If($script:emailViewName.Length -eq 0){$script:emailViewName = "Emails"}
                     Write-Host "View will be created with name $script:emailViewName in listed Document Libraries in the CSV"
                 }
                 'q'{return}
@@ -328,7 +370,8 @@ Try{
             #Authenticate against the Site Collection we are currently working with
             Try{
                 If($script:isSPOnline){
-                    Connect-pnpOnline -url $site.url -SPOManagementShell
+                    #Connect-pnpOnline -url $site.url -SPOManagementShell
+                    Connect-PnPOnline -url $site.url -AccessToken $script:token
                 }
                 Else{
                     Connect-pnpOnline -url $site.url -Credentials $script:onPremisesCred
@@ -361,20 +404,7 @@ Try{
             }
             Write-Host "Columns found for group '$script:groupName':"
             $script:emailColumns | Format-Table
-            Write-Host "These Columns will be added to the Site Content Types listed. Please enter 'Y' to confirm these are correct, or 'N' to skip this Site."
-            $skipSite = $true
-            switch(Read-Host -Prompt "Confirm"){
-                'Y'{
-                    $skipSite = $false
-                }
-                'N'{
-                    $skipSite = $true
-                }
-            }
-            If($skipSite){
-                Write-Host "Skipping Site Collection: $siteName" -ForegroundColor Yellow
-                Continue
-            }
+            Write-Host "These Columns will be added to the Site Content Types listed in your CSV file."
             
             #Get the Content Type Object for 'Document' from SP, we will use this as the parent Content Type for our email Content Type
             $DocCT = Get-PnPContentType -Identity "Document"
@@ -420,11 +450,18 @@ Try{
                     Write-Host "Adding email columns to Site Content Type '$ct'"  -ForegroundColor Yellow
                     $numColumns = $script:emailColumns.Count
                     $i = 0
+                    $emSubjectFound = $false
                     ForEach($column in $script:emailColumns){
                         $column = $column.InternalName
+                        If(($column -eq 'EmSubject') -and ($emSubjectFound -eq $false)){
+                            $emSubjectFound = $true
+                        }
                         Add-PnPFieldToContentType -Field $column -ContentType $ct
                         Write-Progress -Activity "Adding column: $column" -Status "To Site Content Type: $ct in Site Collection: $siteName. Progress:" -PercentComplete ($i/$numColumns*100)
                         $i++
+                    }
+                    If(($false -eq $emSubjectFound) -or ($numColumns -ne 35)){
+                        Throw "Not all Email Columns present. Please check you have added the columns to the Site Collection or elected to do so when prompted with this script."
                     }
                     Write-Progress -Activity "Done adding Columns" -Completed
                 }
@@ -466,7 +503,9 @@ Try{
                 Try{
                     If($script:createDefaultViews){
                         Write-Host "Adding Default View '$script:emailViewName' to Document Library '$libName'."
-                        Add-PnPView -List $libName -Title $script:emailViewName -Fields @('EmDate', 'Name','EmTo', 'EmFromName', 'EmSubject') -SetAsDefault -Web $site.web
+                        #Let SharePoint catch up for a moment
+                        Start-Sleep -Seconds 2
+                        $fix = Add-PnPView -List $libName -Title $script:emailViewName -Fields @('EmDate', 'Name','EmTo', 'EmFromName', 'EmSubject') -SetAsDefault -Web $site.web
                     }
                 }
                 Catch{
@@ -478,6 +517,9 @@ Try{
                 }
             }
             Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
+
+            #refresh our token
+            $script:token = Get-PnPAccessToken
         }   
         Write-Host "Deployment complete! Please check your SharePoint Environment to verify completion. If you would like to copy the output above, do so now before pressing 'Enter'."  
     }
@@ -494,7 +536,8 @@ Try{
                 #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
                 EnumerateSitesDocLibs
                 #Connect to SharePoint Online, specifically the Admin site so we can use the SPO Shell to iterate over the site collections
-                ConnectToSharePointOnlineAdmin
+                #ConnectToSharePointOnlineAdmin
+                ConnectToSharePointOnlineOAuth
                 Deploy
             }
             '2'{
