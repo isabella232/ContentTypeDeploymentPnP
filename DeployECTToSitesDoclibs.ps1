@@ -202,13 +202,13 @@ Try{
     }
 
     #Facilitates connection to the SharePoint Online site collections through an OAUTH 2.0 token
-    function ConnectToSharePointOnlineOAuth([string]$tenant){
+    function ConnectToSharePointOnlineOAuth([string]$rootSharePointUrl){
         #Prompt for SharePoint Root Site Url     
-        If($tenant -eq ""){
-            $tenant = Read-Host -Prompt "Please enter the name of your SharePoint Online tenant, eg for 'https://contoso.sharepoint.com' just enter 'contoso'."
+        If($rootSharePointUrl -eq ""){
+            $rootSharePointUrl = Read-Host -Prompt "Please enter the URL of your SharePoint Online Root Site Collection, eg 'https://contoso.sharepoint.com'."
+            $rootSharePointUrl = $rootSharePointUrl.Trim()
         } 
 
-        $rootSharePointUrl = "https://$tenant.sharepoint.com"
         Write-Host "Please authenticate against your Office 365 tenant by pasting the code copied to your clipboard and signing in. App access must be granted to the Office 365 PnP Management Shell to continue." -ForegroundColor Green  
         Try{
             Connect-PnPOnline -url $rootSharePointUrl -PnPO365ManagementShell -LaunchBrowser
@@ -221,7 +221,7 @@ Try{
         }
 
         #workaround for PnP handling the token. Login to the root site normally and retrieve the token from there, then we will test it.
-        Write-Host "Enter SharePoint credentials(your email address for SharePoint Online):`n" -ForegroundColor Green
+        Write-Host "`nEnter SharePoint credentials(your email address for SharePoint Online):`n" -ForegroundColor Green
         Connect-PnPOnline -url $rootSharePointUrl -UseWebLogin
         $script:token = Get-PnPAccessToken
         Disconnect-PnPOnline
