@@ -215,7 +215,7 @@ Try{
         }
         Catch{
             $exMessage = $($_.Exception.Message)
-            If($exMessage -notmatch 'The handle is invalid'){
+            If(($exMessage -notmatch 'The handle is invalid') -and ($exMessage -notmatch 'Object reference not set to an instance of an object')){
                 Throw $_
             }
         }
