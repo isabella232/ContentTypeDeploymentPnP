@@ -27,7 +27,7 @@ Try{
     $script:onPremisesCred
 
     #Holds our OAuth 2.0 token if using SharePoint Online
-    [string]$script:token = $null
+    $script:token = $null
 
     [boolean]$script:emailColumnsXmlDownloaded = $false
 
