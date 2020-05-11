@@ -401,7 +401,7 @@ Try{
             #Authenticate against the Site Collection we are currently working with
             Try{
                 If($script:isSPOnline -and (-not $script:token)){
-                    Connect-pnpOnline -url $site.url -SPOManagementShell -SkipTenantAdminCheck
+                    Connect-pnpOnline -url $site.url -SPOManagementShell
                 }
                 ElseIf($script:isSPOnline -and $script:token){
                     Connect-PnPOnline -url $site.url -AccessToken $script:token
