@@ -424,6 +424,7 @@ Try {
             Write-Host "Working with Site Collection: $siteName" -ForegroundColor Yellow
             Write-Host "Working with Web: $siteWeb" -ForegroundColor Yellow
             #Authenticate against the Site Collection we are currently working with
+
             Try {
                 If ($script:isSPOnline -and (-not $script:usingTokenAuth)) {
                     Connect-pnpOnline -url $site.url -SPOManagementShell
