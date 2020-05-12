@@ -326,7 +326,7 @@ Try {
         Try {
             If ($script:createDefaultViews) {
                 Write-Host "Adding Default View '$script:emailViewName' to Document Library '$libName'." -Foregroundcolor Yellow
-                $fix = Add-PnPView -List $libName -Title $script:emailViewName -Fields "EmDate", "Name", "EmTo", "EmFromName", "EmSubject" -SetAsDefault -Web $web -ErrorAction Continue
+                $fix = Add-PnPView -List $libName -Title $script:emailViewName -Fields "EmDate", "FileLeafRef", "EmTo", "EmFromName", "EmSubject" -SetAsDefault -Web $web -ErrorAction Continue
                 #Let SharePoint catch up for a moment
                 Start-Sleep -Seconds 2
                 Get-PnPView -List $libName -Identity $script:emailViewName -Web $web
