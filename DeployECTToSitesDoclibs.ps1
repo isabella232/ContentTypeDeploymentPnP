@@ -87,7 +87,7 @@ Try {
                     $this.isSubSite = $false
                 }
             }
-
+            Write-Host "Is this a subsite? $this.isSubSite" -ForegroundColor Yellow
             $this.url = $rootUrl
         }
 
@@ -274,12 +274,18 @@ Try {
             $siteCollection = Read-Host -Prompt "Please enter the Site Collection URL to add the OnePlace Solutions Email Columns to"
         }
         
-        $tempColumns = Get-PnPField -Group $script:groupName
-        $emailColumnCount = 0
-        ForEach ($col in $tempColumns) {
-            If (($col.InternalName -match 'Em') -or ($col.InternalName -match 'Doc')) {
-                $emailColumnCount++
+        Try {
+            $tempColumns = Get-PnPField -Group $script:groupName
+            $emailColumnCount = 0
+            ForEach ($col in $tempColumns) {
+                If (($col.InternalName -match 'Em') -or ($col.InternalName -match 'Doc')) {
+                    $emailColumnCount++
+                }
             }
+        }
+        Catch {
+            #This is fine, we will just try to add the columns anyway
+            Write-Host "Couldn't check email columns, will attempt to add them anyway..." -ForegroundColor Yellow
         }
 
         If ($emailColumnCount -eq 35) {
@@ -289,7 +295,7 @@ Try {
             If ($false -eq $script:emailColumnsXmlDownloaded) {
                 #From 'https://github.com/OnePlaceSolutions/EmailColumnsPnP/blob/master/installEmailColumns.ps1'
                 #Download xml provisioning template
-                $WebClient = New-Object System.Net.WebClient   
+                $WebClient = New-Object System.Net.WebClient
                 $Url = "https://raw.githubusercontent.com/OnePlaceSolutions/EmailColumnsPnP/master/email-columns.xml"    
                 $script:columnsXMLPath = "$env:temp\email-columns.xml"
 
@@ -317,25 +323,24 @@ Try {
         }
     }
     function CreateEmailView([string]$library, [string]$web) {
-        $ErrorActionPreference = Continue
         Try {
             If ($script:createDefaultViews) {
-                Write-Host "Adding Default View '$script:emailViewName' to Document Library '$libName'."
+                Write-Host "Adding Default View '$script:emailViewName' to Document Library '$libName'." -Foregroundcolor Yellow
+                $fix = Add-PnPView -List $libName -Title $script:emailViewName -Fields "EmDate", "Name", "EmTo", "EmFromName", "EmSubject" -SetAsDefault -Web $web -ErrorAction Continue
                 #Let SharePoint catch up for a moment
                 Start-Sleep -Seconds 2
-                $fix = Add-PnPView -List $libName -Title $script:emailViewName -Fields "EmDate", "Name", "EmTo", "EmFromName", "EmSubject" -SetAsDefault -Web $web -ErrorAction Continue
+                Get-PnPView -List $libName -Identity $script:emailViewName -Web $web
             }
         }
         Catch {
-            Write-Host "Error adding Default View '$script:emailViewName' to Document Library '$libName'. Details below. Halting script." -ForegroundColor Red
+            Write-Host "Error checking Default View '$script:emailViewName' to Document Library '$libName'. Details below." -ForegroundColor Red
             $_
             Write-Host "`nContinuing Script...`n"
         }
-        $ErrorActionPreference = Stop
     }
     #Starting menu for selection between SharePoint Online or SharePoint On-Premises, or exiting the script
     function showEnvMenu { 
-        cls 
+        Clear-Host 
         Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
         Write-Host 'Welcome to the OnePlace Solutions Content Type Deployment Script' -ForegroundColor Green
         Write-Host 'Please make a selection:' -ForegroundColor Yellow
@@ -564,7 +569,7 @@ Try {
         switch ($input) { 
             '1' {
                 #Online
-                cls
+                Clear-Host
                 #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
                 EnumerateSitesDocLibs
                 #Connect to SharePoint Online, using SharePoint Management Shell against the Admin site
@@ -573,7 +578,7 @@ Try {
             }
             's' {
                 #Online
-                cls
+                Clear-Host
                 #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
                 EnumerateSitesDocLibs
                 #Skip connecting to the Admin Site, we will automatically connect using SPO management shell when required.
@@ -582,7 +587,7 @@ Try {
             }
             't' {
                 #Online
-                cls
+                Clear-Host
                 #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
                 EnumerateSitesDocLibs
                 #Connect to SharePoint Online, using token based login to iterate over the site collections
