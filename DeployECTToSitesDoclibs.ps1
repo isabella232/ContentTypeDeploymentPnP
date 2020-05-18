@@ -289,7 +289,7 @@ Try {
         }
 
         If ($emailColumnCount -eq 35) {
-            Write-Host "Email columns already present in group '$script:groupName', skipping adding."
+            Write-Host "All Email columns already present in group '$script:groupName', skipping adding."
         }
         Else {
             If ($false -eq $script:emailColumnsXmlDownloaded) {
