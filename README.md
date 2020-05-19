@@ -48,7 +48,7 @@ Please download and modify the CSV before starting.
 3. Run the below command to invoke the current(master) version of the script:
 
    ```
-   Invoke-Expression (New-Object Net.WebClient).DownloadString(‘https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/raw/master/DeployECTToSitesDoclibs.ps1’)
+   Invoke-Expression (New-Object Net.WebClient).DownloadString(‘https://raw.githubusercontent.com/OnePlaceSolutions/ContentTypeDeploymentPnP/master/DeployECTToSitesDoclibs.ps1’)
    ```
    ![InvokeExpression](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/blob/master/README-Images/InvokeExpression.png)
 
