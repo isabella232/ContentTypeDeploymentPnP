@@ -87,7 +87,8 @@ Try {
                     $this.isSubSite = $false
                 }
             }
-            Write-Host "Is this a subsite? $this.isSubSite" -ForegroundColor Yellow
+            [boolean]$temp = $this.isSubSite
+            Write-Host "Is this a subsite? $temp" -ForegroundColor Yellow
             $this.url = $rootUrl
         }
 
@@ -325,15 +326,26 @@ Try {
     function CreateEmailView([string]$library, [string]$web) {
         Try {
             If ($script:createDefaultViews) {
-                Write-Host "Adding Default View '$script:emailViewName' to Document Library '$libName'." -Foregroundcolor Yellow
-                $fix = Add-PnPView -List $libName -Title $script:emailViewName -Fields "EmDate", "FileLeafRef", "EmTo", "EmFromName", "EmSubject" -SetAsDefault -Web $web -ErrorAction Continue
-                #Let SharePoint catch up for a moment
-                Start-Sleep -Seconds 2
-                Get-PnPView -List $libName -Identity $script:emailViewName -Web $web
+                Try {
+                    Get-PnPView -List $libName -Identity $script:emailViewName -Web $web
+                    Write-Host "View '$script:emailViewName' in Document Library '$libName' already exists, skipping." -ForegroundColor Green
+                }
+                Catch [System.NullReferenceException]{
+                    #View does not exist, this is good
+                    Write-Host "Adding Default View '$script:emailViewName' to Document Library '$libName'." -Foregroundcolor Yellow
+                    Add-PnPView -List $libName -Title $script:emailViewName -Fields "EmDate", "FileLeafRef", "EmTo", "EmFromName", "EmSubject" -SetAsDefault -RowLimit 100 -Web $web -ErrorAction Continue
+                    #Let SharePoint catch up for a moment
+                    Start-Sleep -Seconds 2
+                    Get-PnPView -List $libName -Identity $script:emailViewName -Web $web
+                    Write-Host "Success" -ForegroundColor Green 
+                }
+                Catch{
+                    Throw $_
+                }
             }
         }
         Catch {
-            Write-Host "Error checking Default View '$script:emailViewName' to Document Library '$libName'. Details below." -ForegroundColor Red
+            Write-Host "Error checking/creating Default View '$script:emailViewName' to Document Library '$libName'. Details below." -ForegroundColor Red
             $_
             Write-Host "`nContinuing Script...`n"
         }
@@ -370,7 +382,7 @@ Try {
                     If ($script:emailViewName.Length -eq 0) { $script:emailViewName = "Emails" }
                     Write-Host "View will be created with name '$script:emailViewName' in listed Document Libraries in the CSV"
                 }
-                'q' { return }
+                'q' { Exit }
             }
         } 
         until(($input -eq 'q') -or ($script:createDefaultViews -ne $null))
@@ -403,7 +415,7 @@ Try {
                     If ($script:groupName.Length -eq 0) { $script:groupName = "OnePlace Solutions" }
                     Write-Host "Will create and check for columns under group '$script:groupName'"
                 }
-                'q' { return }
+                'q' { Exit }
             }
         } 
         until(($input -eq 'q') -or ($null -ne $script:createEmailColumns))
@@ -438,6 +450,7 @@ Try {
                 }
                 #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
                 Start-Sleep -seconds 2
+                Get-PnPWeb
             }
             Catch {
                 Write-Host "Error connecting to SharePoint Site Collection '$siteName'. Is this URL correct?" -ForegroundColor Red
