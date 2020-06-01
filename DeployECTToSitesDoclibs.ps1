@@ -590,6 +590,7 @@ Try {
                 EnumerateSitesDocLibs
                 #Connect to SharePoint Online, using SharePoint Management Shell against the Admin site
                 ConnectToSharePointOnlineAdmin
+                Pause
                 Deploy
             }
             's' {
