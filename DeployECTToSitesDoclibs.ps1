@@ -148,6 +148,7 @@ Try {
                 Title            = 'Select your CSV file'
             }
             $null = $FileBrowser.ShowDialog()
+            
             $csvFile = $FileBrowser.FileName
         }
 
@@ -212,7 +213,8 @@ Try {
         #Connect to site collection
         
         Write-Host "Enter SharePoint credentials(your email address for SharePoint Online):" -ForegroundColor Green
-        Connect-SPOService -Url $adminSharePointUrl
+        #Connect-SPOService -Url $adminSharePointUrl
+        Connect-PnPOnline -Url $adminSharePointUrl -SPOManagementShell
         #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
         Start-Sleep -Seconds 3
     }
@@ -327,7 +329,7 @@ Try {
         Try {
             If ($script:createDefaultViews) {
                 Try {
-                    Get-PnPView -List $libName -Identity $script:emailViewName -Web $web
+                    $view = Get-PnPView -List $libName -Identity $script:emailViewName -Web $web -ErrorAction Stop
                     Write-Host "View '$script:emailViewName' in Document Library '$libName' already exists, skipping." -ForegroundColor Green
                 }
                 Catch [System.NullReferenceException]{
@@ -336,7 +338,7 @@ Try {
                     Add-PnPView -List $libName -Title $script:emailViewName -Fields "EmDate", "FileLeafRef", "EmTo", "EmFromName", "EmSubject" -SetAsDefault -RowLimit 100 -Web $web -ErrorAction Continue
                     #Let SharePoint catch up for a moment
                     Start-Sleep -Seconds 2
-                    Get-PnPView -List $libName -Identity $script:emailViewName -Web $web
+                    $view = Get-PnPView -List $libName -Identity $script:emailViewName -Web $web
                     Write-Host "Success" -ForegroundColor Green 
                 }
                 Catch{
@@ -440,7 +442,6 @@ Try {
             Try {
                 If ($script:isSPOnline -and (-not $script:usingTokenAuth)) {
                     Connect-pnpOnline -url $site.url -SPOManagementShell
-                    Start-Sleep -Seconds 3
                 }
                 ElseIf ($script:isSPOnline -and $script:usingTokenAuth) {
                     Connect-PnPOnline -url $site.url -AccessToken $script:token
@@ -449,8 +450,8 @@ Try {
                     Connect-pnpOnline -url $site.url -Credentials $script:onPremisesCred
                 }
                 #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
-                Start-Sleep -seconds 2
-                Get-PnPWeb
+                Start-Sleep -seconds 3
+                Get-PnPWeb -ErrorAction Stop
             }
             Catch {
                 Write-Host "Error connecting to SharePoint Site Collection '$siteName'. Is this URL correct?" -ForegroundColor Red
@@ -511,6 +512,7 @@ Try {
                 #Try adding columns to the Content Type
                 Try {
                     Write-Host "Adding email columns to Site Content Type '$ct'"  -ForegroundColor Yellow
+                    Start-Sleep -Seconds 2
                     $numColumns = $script:emailColumns.Count
                     $i = 0
                     $emSubjectFound = $false
@@ -579,7 +581,7 @@ Try {
 
     do {
         showEnvMenu 
-        $input = Read-Host "Please select your SharePoint Environment" 
+        $input = Read-Host "Please select an option" 
         switch ($input) { 
             '1' {
                 #Online
@@ -618,6 +620,22 @@ Try {
                 ConnectToSharePointOnPremises
                 Deploy
             }
+            'c' {
+                #clear logins
+                cls
+                Try {
+                    Disconnect-PnPOnline
+                    Write-Host "Cleared PnP Connection!"
+                }
+                Catch{}
+                Try {
+                    Disconnect-SPOService
+                    Write-Host "Cleared SPO Management Shell Connection!"
+                }
+                Catch{}
+                Start-Sleep -Seconds 3
+                showEnvMenu
+            }
             'q' { return }
         } 
         pause 
@@ -630,8 +648,13 @@ Catch {
 }
 Finally {
     Try {
-        Disconnect-PnPOnline
         Disconnect-SPOService
+    }
+    Catch {
+        #Sink everything, this is just trying to tidy up
+    }
+    Try {
+        Disconnect-PnPOnline
     }
     Catch {
         #Sink everything, this is just trying to tidy up
