@@ -2,7 +2,7 @@
         This script applies the OnePlaceMail Email Columns to an existing site collection, creates Site Content Types, adds them to Document Libraries and creates a default view.
         Please check the README.md on Github before using this script.
 #>
-$ErrorActionPreference = Stop
+$ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
 Try {
     Set-ExecutionPolicy Bypass -Scope Process
