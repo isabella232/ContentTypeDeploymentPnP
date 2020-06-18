@@ -335,10 +335,10 @@ Try {
                 Catch [System.NullReferenceException]{
                     #View does not exist, this is good
                     Write-Host "Adding Default View '$script:emailViewName' to Document Library '$libName'." -Foregroundcolor Yellow
-                    Add-PnPView -List $libName -Title $script:emailViewName -Fields "EmDate", "FileLeafRef", "EmTo", "EmFromName", "EmSubject" -SetAsDefault -RowLimit 100 -Web $web -ErrorAction Continue
+                    $view = Add-PnPView -List $libName -Title $script:emailViewName -Fields "EmDate", "FileLeafRef", "EmTo", "EmFromName", "EmSubject" -SetAsDefault -RowLimit 100 -Web $web -ErrorAction Continue
                     #Let SharePoint catch up for a moment
                     Start-Sleep -Seconds 2
-                    $view = Get-PnPView -List $libName -Identity $script:emailViewName -Web $web
+                    $view = Get-PnPView -List $libName -Identity $script:emailViewName -Web $web -ErrorAction Continue
                     Write-Host "Success" -ForegroundColor Green 
                 }
                 Catch{
@@ -451,7 +451,7 @@ Try {
                 }
                 #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
                 Start-Sleep -seconds 3
-                Get-PnPWeb -ErrorAction Stop
+                Get-PnPWeb -ErrorAction Continue
             }
             Catch {
                 Write-Host "Error connecting to SharePoint Site Collection '$siteName'. Is this URL correct?" -ForegroundColor Red
