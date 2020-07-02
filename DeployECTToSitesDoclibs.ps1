@@ -539,6 +539,13 @@ Try {
             #For each docLib/Document Library in our siteCol/Site Collection, get it's list of Content Types we want to add
             ForEach ($library in $site.documentLibraries.Values) {
                 $libName = $library.name
+                
+                If($null -eq (Get-PnPList -Identity $libName -web $site.web)) {
+                    $filler = "Document Library '$libName' does not exist in this web, skipping."
+                    Write-Log -Level Warn -Message $filler
+                    Continue
+                }
+                
                 Write-Host "`nWorking with Document Library: $libName" -ForegroundColor Yellow
                 Write-Host "Which has Content Types:" -ForegroundColor Yellow
                 $library.contentTypes | Format-Table
