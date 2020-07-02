@@ -338,7 +338,7 @@ Try {
                     $view = Add-PnPView -List $libName -Title $script:emailViewName -Fields "EmDate", "FileLeafRef", "EmTo", "EmFromName", "EmSubject" -SetAsDefault -RowLimit 100 -Web $web -ErrorAction Continue
                     #Let SharePoint catch up for a moment
                     Start-Sleep -Seconds 2
-                    $view = Get-PnPView -List $libName -Identity $script:emailViewName -Web $web -ErrorAction Continue
+                    $view = Get-PnPView -List $libName -Identity $script:emailViewName -Web $web -ErrorAction Stop
                     Write-Host "Success" -ForegroundColor Green 
                 }
                 Catch{
