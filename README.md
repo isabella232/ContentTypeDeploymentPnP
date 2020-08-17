@@ -22,7 +22,7 @@ When you have finished customizing the file, please save and close it to ensure 
 ### Prerequisites
 
 * Administrator rights to your SharePoint Admin Site (for SharePoint Online) and the Site Collections you wish to deploy to.
-* [SharePoint PnP CmdLets](https://docs.microsoft.com/en-us/powershell/sharepoint/sharepoint-pnp/sharepoint-pnp-cmdlets?view=sharepoint-ps) - Required for executing the modifications against your Site Collections. Download the appropriate version for your environment.
+* [SharePoint PnP CmdLets](https://docs.microsoft.com/en-us/powershell/sharepoint/sharepoint-pnp/sharepoint-pnp-cmdlets?view=sharepoint-ps) - Required for executing the modifications against your Site Collections. Please install the appropriate version for your environment.
 * [SharePoint Online Management Shell](https://docs.microsoft.com/en-us/powershell/sharepoint/sharepoint-online/connect-sharepoint-online?view=sharepoint-ps) - Required to Authenticate against your Admin Site and access the listed Site Collections through said authentication. (For SharePoint Online only)
 
 ### Assumptions and Considerations
