@@ -32,8 +32,6 @@ Try {
 
     #Holds our OAuth 2.0 token if using SharePoint Online
     $script:token = $null
-    
-    [boolean]$script:emailColumnsXmlDownloaded = $false
 
     #Contains all the data we need relating to the Site Collection we are working with, including the Document Libraries and the Site Content Type names
     class siteCol {
@@ -291,20 +289,21 @@ Try {
             Write-Host "Couldn't check email columns, will attempt to add them anyway..." -ForegroundColor Yellow
         }
 
+        #Check if we have 35 columns in our Column Group
         If ($emailColumnCount -eq 35) {
             Write-Host "All Email columns already present in group '$script:groupName', skipping adding."
         }
+        #Create the Columns if we didn't find 35
         Else {
-            If ($false -eq $script:emailColumnsXmlDownloaded) {
+            $script:columnsXMLPath = "$env:temp\email-columns.xml"
+            If (-not (Test-Path $script:columnsXMLPath)) {
                 #From 'https://github.com/OnePlaceSolutions/EmailColumnsPnP/blob/master/installEmailColumns.ps1'
                 #Download xml provisioning template
                 $WebClient = New-Object System.Net.WebClient
                 $Url = "https://raw.githubusercontent.com/OnePlaceSolutions/EmailColumnsPnP/master/email-columns.xml"    
-                $script:columnsXMLPath = "$env:temp\email-columns.xml"
-
+                
                 Write-Host "Downloading provisioning xml template:" $script:columnsXMLPath -ForegroundColor Green 
                 $WebClient.DownloadFile( $Url, $script:columnsXMLPath )
-                $script:emailColumnsXmlDownloaded = $true
             }
 
             #Apply xml provisioning template to SharePoint
