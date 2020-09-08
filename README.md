@@ -1,6 +1,16 @@
-# Deploy a OnePlace Solutions Email Content Type to multiple Site Collections and Document Libraries
+# ContentTypeDeploymentPnP ReadMe
 
 A script and sample CSV file to create the OnePlace Solutions Email Columns, add them to Content Types in listed Site Collections, create the named Content Type(s) where necessary, add them to listed Document Libraries, and create a default Email view.
+
+## Table of Contents
+
+1. [Getting Started](#getting-started)\
+    1a. [Pre-Requisites](#pre-requisites)\
+    1b. [Assumptions and Considerations](#assumptions-and-considerations)\
+    1c. [Restrictions](#restrictions)
+2. [Usage](#usage)
+3. [License](#license)
+4. [Acknowledgments](#acknowledgments)
 
 ## Getting Started
 
@@ -19,7 +29,7 @@ Notes regarding the CSV file:
 
 When you have finished customizing the file, please save and close it to ensure the script can correctly read it.
 
-### Prerequisites
+### Pre-Requisites
 
 * Administrator rights to your SharePoint Admin Site (for SharePoint Online) and the Site Collections you wish to deploy to.
 * [SharePoint PnP CmdLets June 2020 Release](https://github.com/pnp/PnP-PowerShell/releases/tag/3.22.2006.2) - Required for executing the modifications against your Site Collections. Please install the appropriate version for your environment.\
@@ -38,7 +48,7 @@ When you have finished customizing the file, please save and close it to ensure 
 * Only works for SharePoint Online or 2016/2019 environments. SharePoint 2013 is not supported with this script.
 * Only works with Site Content Types (for both creation and adding Email Columns to existing) inheriting from the 'Document' Site Content Type. These Site Content Types can however still be added to locations within subsites/subwebs.
 
-### Usage
+## Usage
 
 1. Download the CSV file and modify it to suit your deployment requirements. 
 
