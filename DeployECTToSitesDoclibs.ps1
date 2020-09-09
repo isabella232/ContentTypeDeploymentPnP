@@ -346,7 +346,7 @@ Try {
         Catch {
             Write-Host "Error parsing CSV file. Is this filepath for a a valid CSV file?" -ForegroundColor Red
             $csvFile
-            Throw $_
+            Throw
         }
     }
 
@@ -402,7 +402,7 @@ Try {
             $exMessage = $($_.Exception.Message)
             #These messages can be ignored. If we have an empty token we will throw an exception further down
             If (($exMessage -notmatch 'The handle is invalid') -and ($exMessage -notmatch 'Object reference not set to an instance of an object')) {
-                Throw $_
+                Throw
             }
         }
 
@@ -506,7 +506,7 @@ Try {
                     Write-Host "Success" -ForegroundColor Green 
                 }
                 Catch{
-                    Throw $_
+                    Throw
                 }
             }
         }
@@ -628,7 +628,7 @@ Try {
                 Write-Host "Error connecting to SharePoint Site Collection '$siteName'. Is this URL correct?" -ForegroundColor Red
                 $site.url
                 Write-Host "Other Details below. Halting script." -ForegroundColor Red
-                Throw $_
+                Throw
             }
 
             #Check if we are creating email columns, if so, do so now
@@ -680,13 +680,13 @@ Try {
                         }
                         Catch {
                             Write-Host "Error creating Content Type '$ct' with parent of Document. Details below. Halting script." -ForegroundColor Red
-                            Throw $_
+                            Throw
                         } 
                     }
                 }
                 Catch {
                     Write-Host "Error checking for existence of Content Type '$ct'. Details below. Halting script." -ForegroundColor Red
-                    Throw $_
+                    Throw
                 }
 
                 #Try adding columns to the Content Type
@@ -714,7 +714,7 @@ Try {
                 }
                 Catch {
                     Write-Host "Error adding email columns to Site Content Type '$ct'. Details below. Halting script." -ForegroundColor Red
-                    Throw $_
+                    Throw
                 }
             }
 
@@ -756,8 +756,8 @@ Try {
                 }
             }
             Catch {
-                Write-Host "Failed to refresh PnP Auth Token, will attempt to continue:`n"
-                $_
+                Write-Log -level Warn -Message "Failed to refresh PnP Auth Token, will attempt to continue:`n"
+                Write-Log -level Info -Message $_
             }
         
         }   
