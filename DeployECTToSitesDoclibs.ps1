@@ -489,6 +489,7 @@ Try {
             }
         }
     }
+
     function CreateEmailView([string]$library, [string]$web) {
         Try {
             If ($script:createDefaultViews) {
