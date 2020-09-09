@@ -622,7 +622,8 @@ Try {
                 }
                 #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
                 Start-Sleep -seconds 3
-                Get-PnPWeb -ErrorAction Continue
+                Get-PnPWeb -ErrorAction Continue | Out-Null
+                Write-Log -Level Info -Message "Authenticated"
             }
             Catch {
                 Write-Host "Error connecting to SharePoint Site Collection '$siteName'. Is this URL correct?" -ForegroundColor Red
