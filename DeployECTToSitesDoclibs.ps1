@@ -212,9 +212,10 @@ Try {
         
         Write-Host "Enter SharePoint credentials(your email address for SharePoint Online):" -ForegroundColor Green
         #Connect-SPOService -Url $adminSharePointUrl
-        Connect-PnPOnline -Url $adminSharePointUrl -SPOManagementShell
+        Connect-PnPOnline -Url $adminSharePointUrl -SPOManagementShell -ClearTokenCache
         #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
         Start-Sleep -Seconds 3
+        Pause
     }
 
     #Facilitates connection to the SharePoint Online site collections through an OAUTH 2.0 token
