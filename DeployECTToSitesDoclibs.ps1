@@ -377,7 +377,7 @@ Try {
         
         Write-Host "Enter SharePoint credentials(your email address for SharePoint Online):" -ForegroundColor Green
         #Connect-SPOService -Url $adminSharePointUrl
-        Connect-PnPOnline -Url $adminSharePointUrl -SPOManagementShell
+        Connect-PnPOnline -Url $adminSharePointUrl -SPOManagementShell -ClearTokenCache
         #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
         Start-Sleep -Seconds 3
     }
@@ -477,10 +477,11 @@ Try {
             $rawXml = Get-Content $script:columnsXMLPath
         
             #To fix certain compatibility issues between site template types, we will just pull the Field XML from the template
+            $i = 1
             ForEach ($line in $rawXml) {
                 Try {
                     If (($line.ToString() -match 'Name="Em') -or ($line.ToString() -match 'Name="Doc')) {
-                        Add-PnPFieldFromXml -fieldxml $line -ErrorAction Stop
+                        $fieldAdded = Add-PnPFieldFromXml -fieldxml $line -ErrorAction Stop | Out-Null
                     }
                 }
                 Catch {
@@ -612,6 +613,7 @@ Try {
                 If ($script:isSPOnline -and (-not $script:usingTokenAuth)) {
                     Write-Log -Level Info -Message "Connecting using SPOMS Auth"
                     Connect-pnpOnline -url $site.url -SPOManagementShell
+                    Start-Sleep -Seconds 2
                 }
                 ElseIf ($script:isSPOnline -and $script:usingTokenAuth) {
                     Write-Log -Level Info -Message "Connecting using Token Auth"
@@ -623,7 +625,7 @@ Try {
                 }
                 #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
                 Start-Sleep -seconds 3
-                Get-PnPWeb -ErrorAction Continue | Out-Null
+                Get-PnPWeb -ErrorAction Continue
                 Write-Log -Level Info -Message "Authenticated"
             }
             Catch {
