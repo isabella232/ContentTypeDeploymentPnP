@@ -4,6 +4,9 @@
 #>
 $ErrorActionPreference = 'Stop'
 
+#Columns to add to the Email View if we are creating one. Edit as required.
+[string[]]$script:emailViewColumns = @("EmHasAttachments","EmSubject","EmTo","EmDate","EmFromName")
+
 $script:logFile = "OPSScriptLog.txt"
 $script:logPath = "$env:userprofile\Documents\$script:logFile"
 
@@ -501,7 +504,7 @@ Try {
                 Catch [System.NullReferenceException]{
                     #View does not exist, this is good
                     Write-Host "Adding Default View '$script:emailViewName' to Document Library '$libName'." -Foregroundcolor Yellow
-                    $view = Add-PnPView -List $libName -Title $script:emailViewName -Fields "EmDate", "FileLeafRef", "EmTo", "EmFromName", "EmSubject" -SetAsDefault -RowLimit 100 -Web $web -ErrorAction Continue
+                    $view = Add-PnPView -List $libName -Title $script:emailViewName -Fields $script:emailViewColumns -SetAsDefault -RowLimit 100 -Web $web -ErrorAction Continue
                     #Let SharePoint catch up for a moment
                     Start-Sleep -Seconds 2
                     $view = Get-PnPView -List $libName -Identity $script:emailViewName -Web $web -ErrorAction Stop
