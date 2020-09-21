@@ -3,9 +3,146 @@
         Please check the README.md on Github before using this script.
 #>
 $ErrorActionPreference = 'Stop'
+
+$script:logFile = "OPSScriptLog.txt"
+$script:logPath = "$env:userprofile\Documents\$script:logFile"
+
+$script:extractedTenant = ""
+
+function Write-Log { 
+    <#
+        .NOTES 
+            Created by: Jason Wasser @wasserja 
+            Modified by: Ashley Gregory
+        .LINK (original)
+            https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0 
+        #>
+    [CmdletBinding()] 
+    Param ( 
+        [Parameter(Mandatory = $true, 
+            ValueFromPipelineByPropertyName = $true)] 
+        [ValidateNotNullOrEmpty()] 
+        [Alias("LogContent")] 
+        [string]$Message, 
+    
+        [Parameter(Mandatory = $false)] 
+        [Alias('LogPath')] 
+        [string]$Path = $script:logPath, 
+            
+        [Parameter(Mandatory = $false)] 
+        [ValidateSet("Error", "Warn", "Info")] 
+        [string]$Level = "Info", 
+            
+        [Parameter(Mandatory = $false)] 
+        [switch]$NoClobber 
+    ) 
+    
+    Begin {
+        $VerbosePreference = 'SilentlyContinue' 
+        $ErrorActionPreference = 'Continue'
+    } 
+    Process {
+        # If the file already exists and NoClobber was specified, do not write to the log. 
+        If ((Test-Path $Path) -AND $NoClobber) { 
+            Write-Error "Log file $Path already exists, and you specified NoClobber. Either delete the file or specify a different name." 
+            Return 
+        } 
+    
+        # If attempting to write to a log file in a folder/path that doesn't exist create the file including the path. 
+        ElseIf (!(Test-Path $Path)) { 
+            Write-Verbose "Creating $Path." 
+            $NewLogFile = New-Item $Path -Force -ItemType File 
+        } 
+    
+        Else { 
+            # Nothing to see here yet. 
+        } 
+    
+        # Format Date for our Log File 
+        $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss K" 
+    
+        # Write message to error, warning, or verbose pipeline and specify $LevelText 
+        Switch ($Level) { 
+            'Error' { 
+                Write-Error $Message 
+                $LevelText = 'ERROR:' 
+            } 
+            'Warn' { 
+                Write-Warning $Message 
+                $LevelText = 'WARNING:' 
+            } 
+            'Info' { 
+                Write-Verbose $Message 
+                $LevelText = 'INFO:' 
+            } 
+        } 
+            
+        # Write log entry to $Path 
+        "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append 
+    }
+    End {
+        $ErrorActionPreference = 'Stop'
+    } 
+}
+
 Add-Type -AssemblyName System.Windows.Forms
 Try {
     Set-ExecutionPolicy Bypass -Scope Process
+
+    Clear-Host
+    Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
+    Write-Host 'Welcome to the OnePlace Solutions Content Type Deployment Script' -ForegroundColor Green
+    Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
+
+    Write-Host "Beginning script. `nLogging script actions to $script:logPath" -ForegroundColor Cyan
+    Start-Sleep -Seconds 3
+
+    #Check for module versions of PnP / SPOMS
+    Try {
+        Write-Host "Checking if PnP / SPOMS installed via Module..." -ForegroundColor Cyan
+        $pnpModule = Get-Module SharePointPnPPowerShell* | Select-Object Name, Version
+        $spomsModule = Get-InstalledModule Microsoft.Online.SharePoint.PowerShell | Select-Object Name, Version
+    }
+    Catch {
+        #Couldn't check PNP or SPOMS Module versions
+    }
+    Finally {
+        Write-Log -Level Info -Message "PnP Module Installed: $pnpModule"
+        Write-Log -Level Info -Message "SPOMS Module Installed: $spomsModule"
+    }
+
+    #Check for MSI versions of PnP / SPOMS
+    Try {
+        Write-Host "Checking if PnP / SPOMS installed via MSI..." -ForegroundColor Cyan
+        $pnpMSI = Get-WmiObject Win32_Product | ? {$_.Name -match "PnP PowerShell*"} | Select-Object Name, Version
+        $spomsMSI = Get-WmiObject Win32_Product | ? {$_.Name -match "SharePoint Online Management Shell"} | Select-Object Name, Version
+    }
+    Catch {
+        #Couldn't check PNP or SPOMS MSI versions
+    }
+    Finally {
+        Write-Log -Level Info -Message "PnP MSI Installed: $pnpMSI"
+        Write-Log -Level Info -Message "SPOMS MSI Installed: $spomsMSI"
+    }
+
+    $preReqMissing = $false
+    If (($null -eq $pnpModule) -and ($null -eq $pnpMSI)) {
+        Write-Log -Level Warn -Message "No SharePoint PnP Cmdlets installation detected! This is required."
+        $preReqMissing = $true
+    }
+    If (($null -eq $spomsModule) -and ($null -eq $spomsMSI)) {
+        Write-Log -Level Warn -Message "No SharePoint Online Management Shell installation detected! This is required."
+        $preReqMissing = $true
+    }
+    If ($preReqMissing) {
+        Write-Host "`nPlease ensure you have checked and installed the pre-requisites listed in the GitHub documentation prior to running this script."
+        Write-Host "!!! If pre-requisites for the Content Type Deployment have not been completed this script/process may fail !!!" -ForegroundColor Yellow
+        Pause
+    }
+    Else {
+        Write-Host "Pre-requisites installed!" -ForegroundColor Green
+    }
+    Start-Sleep -Seconds 2
 
     #Contains all our Site Collections as siteCol objects
     $script:siteColsHT = @{ }
@@ -50,7 +187,9 @@ Try {
                 $this.name = $name
             }
             $filler = $this.name
-            Write-Host "Creating siteCol object with name '$filler'" -ForegroundColor Yellow
+            $filler = "Creating siteCol object with name '$filler'"
+            Write-Host $filler -ForegroundColor Yellow
+            Write-Log -Level Info -Message $filler
 
             $this.contentTypes = @()
 
@@ -86,7 +225,9 @@ Try {
                 }
             }
             [boolean]$temp = $this.isSubSite
-            Write-Host "Is this a subsite? $temp" -ForegroundColor Yellow
+            $filler = "Is this a subsite? $temp"
+            Write-Host $filler -ForegroundColor Yellow
+            Write-Log -Level Info -Message $filler
             $this.url = $rootUrl
         }
 
@@ -95,18 +236,25 @@ Try {
             If (($null -ne $docLibName) -and ($docLibName -ne "")) {
                 If ($this.documentLibraries.ContainsKey($docLibName)) {
                     $this.documentLibraries.$docLibName
+                    Write-Log -Level Info -Message "Document Library '$docLibName' already listed for this Site Collection."
                 }
                 Else {
                     $tempDocLib = [docLib]::new("$docLibName")
                     $this.documentLibraries.Add($docLibName, $tempDocLib)
+                    Write-Log -Level Info -Message "Document Library '$docLibName' not listed for this Site Collection, added."
                 }
                 
                 $this.documentLibraries.$docLibName.addContentType($contentTypeName)
+                Write-Log -Level Info -Message "Listing Content Type '$contentTypeName' for Document Library '$docLibName'."
             }
             
             #If the named Content Type is not already listed in Site Content Types, add it to the Site Content Types
             If (-not $this.contentTypes.Contains($contentTypeName)) {
                 $this.contentTypes += $contentTypeName
+                Write-Log -Level Info -Message "Content Type '$contentTypeName' not listed in Site Content Types, adding."
+            }
+            Else {
+                Write-Log -Level Info -Message "Content Type '$contentTypeName' listed in Site Content Types."
             }
         }
     }
@@ -117,7 +265,9 @@ Try {
         [Array]$contentTypes
 
         docLib([String]$name) {
-            Write-Host "Creating docLib object with name $name" -ForegroundColor Yellow
+            $filler = "Creating docLib object with name $name"
+            Write-Host $filler -ForegroundColor Yellow
+            Write-Log -Level Info -Message $filler
             $this.name = $name
             $this.contentTypes = @()
         }
@@ -125,12 +275,16 @@ Try {
         [void]addContentType([string]$contentTypeName) {
             If (-not $this.contentTypes.Contains($contentTypeName)) {
                 $filler = $this.name
-                Write-Host "Adding Content Type '$contentTypeName' to '$filler' Document Library Content Types" -ForegroundColor Yellow
+                $filler = "Adding Content Type '$contentTypeName' to '$filler' Document Library Content Types"
+                Write-Host $filler -ForegroundColor Yellow
+                Write-Log -Level Info -Message $filler
                 $this.contentTypes += $contentTypeName
             }
             Else {
                 $temp = $this.name
-                Write-Host "Content Type '$contentTypeName' already listed in Document Library $temp" -ForegroundColor Red
+                $filler = "Content Type '$contentTypeName' already listed in Document Library $temp"
+                Write-Host $filler -ForegroundColor Red
+                Write-Log -Level Info -Message $filler
             }
         }
     }
@@ -148,6 +302,7 @@ Try {
             $null = $FileBrowser.ShowDialog()
             
             $csvFile = $FileBrowser.FileName
+            Write-Log -Level Info -Message "Using CSV at path '$csvFile'"
         }
 
         $script:siteColsHT = [hashtable]::new
@@ -162,6 +317,12 @@ Try {
                 $csv_siteUrl = $element.SiteUrl -replace '\s', '' #remove any whitespace from URL
                 $csv_docLib = $element.DocLib
                 $csv_contentType = $element.CTName
+
+                If("" -eq $script:extractedTenant) {
+                    $script:extractedTenant = $csv_siteUrl  -match 'https://(?<Tenant>.+)\.sharepoint.com'
+                    $script:extractedTenant = $Matches.Tenant
+                    Write-Log -Level Info -Message "Extracted Tenant name '$script:extractedTenant'"
+                }
 
                 #Don't create siteCol objects that do not have a URL, this also accounts for empty lines at EOF
                 If ($csv_siteUrl -ne "") {
@@ -178,12 +339,14 @@ Try {
                     }
                 }
             }
-            Write-Host "Completed Enumerating Site Collections and Document Libraries from CSV file!" -ForegroundColor Green
+            $filler = "Completed Enumerating Site Collections and Document Libraries from CSV file!"
+            Write-Host $filler -ForegroundColor Green
+            Write-Log -Level Info -Message $filler
         }
         Catch {
             Write-Host "Error parsing CSV file. Is this filepath for a a valid CSV file?" -ForegroundColor Red
             $csvFile
-            Throw $_
+            Throw
         }
     }
 
@@ -207,7 +370,9 @@ Try {
                 $adminSharePointUrl = "https://$tenant-admin.sharepoint.com"
             }
         }
-
+        Else {
+            $adminSharePointUrl = "https://$tenant-admin.sharepoint.com"
+        }
         #Connect to site collection
         
         Write-Host "Enter SharePoint credentials(your email address for SharePoint Online):" -ForegroundColor Green
@@ -238,7 +403,7 @@ Try {
             $exMessage = $($_.Exception.Message)
             #These messages can be ignored. If we have an empty token we will throw an exception further down
             If (($exMessage -notmatch 'The handle is invalid') -and ($exMessage -notmatch 'Object reference not set to an instance of an object')) {
-                Throw $_
+                Throw
             }
         }
 
@@ -342,7 +507,7 @@ Try {
                     Write-Host "Success" -ForegroundColor Green 
                 }
                 Catch{
-                    Throw $_
+                    Throw
                 }
             }
         }
@@ -357,8 +522,8 @@ Try {
         Clear-Host 
         Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
         Write-Host 'Welcome to the OnePlace Solutions Content Type Deployment Script' -ForegroundColor Green
-        Write-Host 'Please make a selection:' -ForegroundColor Yellow
         Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
+        Write-Host 'Please make a selection:' -ForegroundColor Yellow
         Write-Host "1: SharePoint Online (365)" 
         Write-Host "2: SharePoint On-Premises (2016/2019)"
         Write-Host "Q: Press 'Q' to quit." 
@@ -435,40 +600,50 @@ Try {
         ForEach ($site in $script:siteColsHT.Values) {
             $siteName = $site.name
             $siteWeb = $site.web
-            Write-Host "Working with Site Collection: $siteName" -ForegroundColor Yellow
-            Write-Host "Working with Web: $siteWeb" -ForegroundColor Yellow
+            $filler = "Working with Site Collection: $siteName"
+            Write-Host $filler -ForegroundColor Yellow
+            Write-Log -Level Info -Message $filler
+            $filler = "Working with Web: $siteWeb"
+            Write-Host $filler -ForegroundColor Yellow
+            Write-Log -Level Info -Message $filler
             #Authenticate against the Site Collection we are currently working with
 
             Try {
                 If ($script:isSPOnline -and (-not $script:usingTokenAuth)) {
+                    Write-Log -Level Info -Message "Connecting using SPOMS Auth"
                     Connect-pnpOnline -url $site.url -SPOManagementShell
                 }
                 ElseIf ($script:isSPOnline -and $script:usingTokenAuth) {
+                    Write-Log -Level Info -Message "Connecting using Token Auth"
                     Connect-PnPOnline -url $site.url -AccessToken $script:token
                 }
                 Else {
+                    Write-Log -Level Info -Message "Connecting using On Prem Auth"
                     Connect-pnpOnline -url $site.url -Credentials $script:onPremisesCred
                 }
                 #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
                 Start-Sleep -seconds 3
-                Get-PnPWeb -ErrorAction Continue
+                Get-PnPWeb -ErrorAction Continue | Out-Null
+                Write-Log -Level Info -Message "Authenticated"
             }
             Catch {
                 Write-Host "Error connecting to SharePoint Site Collection '$siteName'. Is this URL correct?" -ForegroundColor Red
                 $site.url
                 Write-Host "Other Details below. Halting script." -ForegroundColor Red
-                Throw $_
+                Throw
             }
 
             #Check if we are creating email columns, if so, do so now
             If ($script:createEmailColumns) {
+                Write-Log -Level Info -Message "User has opted to create email columns"
                 CreateEmailColumns -siteCollection $site.url
             }
 
             #Retrieve all the columns/fields for the group specified in this Site Collection, we will add these to the named Content Types shortly. If we do not get the site columns, skip this Site Collection
             $script:emailColumns = Get-PnPField -Group $script:groupName
             If (($null -eq $script:emailColumns) -or ($null -eq $script:groupName)) {
-                Write-Host "Email Columns not found in Site Columns group '$script:groupName' for Site Collection '$siteName'. Skipping."
+                $filler = "Email Columns not found in Site Columns group '$script:groupName' for Site Collection '$siteName'. Skipping."
+                Write-Log -Level Warn -Message $filler
                 Pause
                 Continue
             }
@@ -479,46 +654,55 @@ Try {
             #Get the Content Type Object for 'Document' from SP, we will use this as the parent Content Type for our email Content Type
             $DocCT = Get-PnPContentType -Identity "Document"
             If ($DocCT -eq $null) {
-                Write-Host "Couldn't get 'Document' Site Content Type in $siteName. Skipping Site Collection: $siteName"
+                $filler = "Couldn't get 'Document' Site Content Type in $siteName. Skipping Site Collection: $siteName"
+                Write-Log -Level Warn -Message $filler
                 Pause
                 Continue
             }
             #For each Site Content Type listed for this siteCol/Site Collection, try and create it and add the email columns to it
             ForEach ($ct in $site.contentTypes) {
                 Try {
-                    Write-Host "Checking if Content Type '$ct' already exists" -ForegroundColor Yellow
+                    $filler = "Checking if Content Type '$ct' already exists"
+                    Write-Host $filler -ForegroundColor Yellow
+                    Write-Log -Level Info -Message $filler
                     $foundContentType = Get-PnPContentType -Identity $ct
                 
                     #If Content Type object returned is null, assume Content Type does not exist, create it. 
                     #If it does exist and we just failed to find it, this will throw exceptions for 'Duplicate Content Type found', and then continue.
                     If ($foundContentType -eq $null) {
-                        Write-Host "Couldn't find Content Type '$ct', might not exist" -ForegroundColor Red
+                        $filler = "Couldn't find Content Type '$ct', might not exist"
+                        Write-Host $filler -ForegroundColor Red
+                        Write-Log -Level Info -Message $filler
                         #Creating content type
                         Try {
-                            Write-Host "Creating Content Type '$ct' with parent of 'Document'" -ForegroundColor Yellow
+                            $filler = "Creating Content Type '$ct' with parent of 'Document'"
+                            Write-Host $filler -ForegroundColor Yellow
+                            Write-Log -Level Info -Message $filler
                             Add-PnPContentType -name $ct -Group "Custom Content Types" -ParentContentType $DocCT -Description "Email Content Type"
                         }
                         Catch {
                             Write-Host "Error creating Content Type '$ct' with parent of Document. Details below. Halting script." -ForegroundColor Red
-                            Throw $_
+                            Throw
                         } 
                     }
                 }
                 Catch {
                     Write-Host "Error checking for existence of Content Type '$ct'. Details below. Halting script." -ForegroundColor Red
-                    Throw $_
+                    Throw
                 }
 
                 #Try adding columns to the Content Type
                 Try {
-                    Write-Host "Adding email columns to Site Content Type '$ct'"  -ForegroundColor Yellow
+                    $filler = "Adding email columns to Site Content Type '$ct'"
+                    Write-Host $filler -ForegroundColor Yellow
+                    Write-Log -Level Info -Message $filler
                     Start-Sleep -Seconds 2
                     $numColumns = $script:emailColumns.Count
                     $i = 0
                     $emSubjectFound = $false
                     ForEach ($column in $script:emailColumns) {
                         $column = $column.InternalName
-                        If (($column -eq 'EmSubject') -and ($emSubjectFound -eq $false)) {
+                        If ($column -eq 'EmSubject') {
                             $emSubjectFound = $true
                         }
                         Add-PnPFieldToContentType -Field $column -ContentType $ct
@@ -532,14 +716,16 @@ Try {
                 }
                 Catch {
                     Write-Host "Error adding email columns to Site Content Type '$ct'. Details below. Halting script." -ForegroundColor Red
-                    Throw $_
+                    Throw
                 }
             }
 
             #For each docLib/Document Library in our siteCol/Site Collection, get it's list of Content Types we want to add
             ForEach ($library in $site.documentLibraries.Values) {
                 $libName = $library.name
-                Write-Host "`nWorking with Document Library: $libName" -ForegroundColor Yellow
+                $filler = "`nWorking with Document Library: $libName" 
+                Write-Host $filler -ForegroundColor Yellow
+                Write-Log -Level Info -Message $filler
                 Write-Host "Which has Content Types:" -ForegroundColor Yellow
                 $library.contentTypes | Format-Table
 
@@ -549,7 +735,9 @@ Try {
                 #For each Site Content Type listed for this docLib/Document Library, try to add it to said Document Library
                 Try {
                     ForEach ($ct in $library.contentTypes) {
-                        Write-Host "Adding Site Content Type '$ct' to Document Library '$libName'..." -ForegroundColor Yellow
+                        $filler = "Adding Site Content Type '$ct' to Document Library '$libName'..."
+                        Write-Host $filler -ForegroundColor Yellow
+                        Write-Log -Level Info -Message $filler
                         Add-PnPContentTypeToList -List $libName -ContentType $ct -Web $site.web
                     }
                 }
@@ -566,16 +754,19 @@ Try {
                 If ($script:usingTokenAuth) {
                     #refresh our token if we are using one
                     $script:token = Get-PnPAccessToken
+                    Write-Log -Level Info -Message "Refreshing Access Token"
                 }
             }
             Catch {
-                Write-Host "Failed to refresh PnP Auth Token, will attempt to continue:`n"
-                $_
+                Write-Log -level Warn -Message "Failed to refresh PnP Auth Token, will attempt to continue:`n"
+                Write-Log -level Info -Message $_
             }
         
         }   
-        Write-Host "Deployment complete! Please check your SharePoint Environment to verify completion. If you would like to copy the output above, do so now before pressing 'Enter'."  
+        Write-Host "Deployment complete! Please check your SharePoint Environment to verify completion. If you would like to copy the output above, do so now before pressing 'Enter'." 
+        Write-Log -Level Info -Message "Deployment complete." 
     }
+
     #Start of Script
     #----------------------------------------------------------------
 
@@ -585,16 +776,33 @@ Try {
         switch ($input) { 
             '1' {
                 #Online
+                Write-Log -Level Info -Message "User has selected Option 1 for SPO."
                 Clear-Host
                 #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
                 EnumerateSitesDocLibs
                 #Connect to SharePoint Online, using SharePoint Management Shell against the Admin site
-                ConnectToSharePointOnlineAdmin
+                If("" -ne $script:extractedTenant) {
+                    Write-Host "`nExtracted Tenant Name '$script:extractedTenant' from CSV, is this correct?"
+                    Write-Host "N: No" 
+                    Write-Host "Y: Yes"
+                    $otherInput = Read-Host "Please select an option" 
+                    If($otherInput[0] -eq 'Y') {
+                        Write-Log -Level Info -Message "User has confirmed extracted Tenant name."
+                        ConnectToSharePointOnlineAdmin -Tenant $script:extractedTenant
+                    }
+                    Else {
+                        ConnectToSharePointOnlineAdmin
+                    }
+                }
+                Else {
+                    ConnectToSharePointOnlineAdmin
+                }
                 Pause
                 Deploy
             }
             's' {
                 #Online
+                Write-Log -Level Info -Message "User has selected Option S for skipping Admin Site pre-auth."
                 Clear-Host
                 #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
                 EnumerateSitesDocLibs
@@ -604,6 +812,7 @@ Try {
             }
             't' {
                 #Online
+                Write-Log -Level Info -Message "User has selected Option T for token auth."
                 Clear-Host
                 #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
                 EnumerateSitesDocLibs
@@ -614,6 +823,7 @@ Try {
             }
             '2' {
                 #On-Premises
+                Write-Log -Level Info -Message "User has selected Option 2 for SP On Prem."
                 cls
                 #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
                 EnumerateSitesDocLibs
@@ -623,6 +833,7 @@ Try {
             }
             'c' {
                 #clear logins
+                Write-Log -Level Info -Message "User has selected Option C for clear logins."
                 cls
                 Try {
                     Disconnect-PnPOnline
@@ -645,7 +856,13 @@ Try {
     }
 }
 Catch {
-    $_
+    $exType = $($_.Exception.GetType().FullName)
+    $exMessage = $($_.Exception.Message)
+    Write-Host "`nCaught an exception, further debugging information below:" -ForegroundColor Red
+    Write-Log -Level Error -Message "Caught an exception. Exception Type: $exType. $exMessage"
+    Write-Host $exMessage -ForegroundColor Red
+    Write-Host "`nPlease send the log file at '$script:logPath' to 'support@oneplacesolutions.com' for assistance." -ForegroundColor Yellow
+    Pause
 }
 Finally {
     Try {
