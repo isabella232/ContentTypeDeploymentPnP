@@ -4,6 +4,9 @@
 #>
 $ErrorActionPreference = 'Stop'
 
+#Columns to add to the Email View if we are creating one. Edit as required.
+[string[]]$script:emailViewColumns = @("EmHasAttachments","EmSubject","EmTo","EmDate","EmFromName")
+
 $script:logFile = "OPSScriptLog.txt"
 $script:logPath = "$env:userprofile\Documents\$script:logFile"
 
@@ -479,10 +482,11 @@ Try {
             $rawXml = Get-Content $script:columnsXMLPath
         
             #To fix certain compatibility issues between site template types, we will just pull the Field XML from the template
+            $i = 1
             ForEach ($line in $rawXml) {
                 Try {
                     If (($line.ToString() -match 'Name="Em') -or ($line.ToString() -match 'Name="Doc')) {
-                        Add-PnPFieldFromXml -fieldxml $line -ErrorAction Stop
+                        $fieldAdded = Add-PnPFieldFromXml -fieldxml $line -ErrorAction Stop | Out-Null
                     }
                 }
                 Catch {
@@ -491,6 +495,7 @@ Try {
             }
         }
     }
+
     function CreateEmailView([string]$library, [string]$web) {
         Try {
             If ($script:createDefaultViews) {
@@ -501,7 +506,7 @@ Try {
                 Catch [System.NullReferenceException]{
                     #View does not exist, this is good
                     Write-Host "Adding Default View '$script:emailViewName' to Document Library '$libName'." -Foregroundcolor Yellow
-                    $view = Add-PnPView -List $libName -Title $script:emailViewName -Fields "EmDate", "FileLeafRef", "EmTo", "EmFromName", "EmSubject" -SetAsDefault -RowLimit 100 -Web $web -ErrorAction Continue
+                    $view = Add-PnPView -List $libName -Title $script:emailViewName -Fields $script:emailViewColumns -SetAsDefault -RowLimit 100 -Web $web -ErrorAction Continue
                     #Let SharePoint catch up for a moment
                     Start-Sleep -Seconds 2
                     $view = Get-PnPView -List $libName -Identity $script:emailViewName -Web $web -ErrorAction Stop
@@ -613,6 +618,7 @@ Try {
                 If ($script:isSPOnline -and (-not $script:usingTokenAuth)) {
                     Write-Log -Level Info -Message "Connecting using SPOMS Auth"
                     Connect-pnpOnline -url $site.url -SPOManagementShell
+                    Start-Sleep -Seconds 2
                 }
                 ElseIf ($script:isSPOnline -and $script:usingTokenAuth) {
                     Write-Log -Level Info -Message "Connecting using Token Auth"
@@ -624,7 +630,7 @@ Try {
                 }
                 #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
                 Start-Sleep -seconds 3
-                Get-PnPWeb -ErrorAction Continue | Out-Null
+                Get-PnPWeb -ErrorAction Continue
                 Write-Log -Level Info -Message "Authenticated"
             }
             Catch {
