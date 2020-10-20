@@ -358,33 +358,52 @@ Try {
     #This automatically takes place on 'Connect-PnPOnline -SPOManagementShell' calls, but we can explicitly connect first here
     function ConnectToSharePointOnlineAdmin([string]$tenant) {
         #Prompt for SharePoint Management Site Url     
-        If ($tenant -eq "") {
-            $tenant = Read-Host -Prompt "Please enter the name of your SharePoint Online tenant, eg for 'https://contoso.sharepoint.com' just enter 'contoso'."
-            $tenant = $tenant.Trim()
-            If (($tenant.Contains("sharepoint")) -and (-not $tenant.Contains('-admin'))) {
-                $tenant = $tenant.trim("https://")
-                $charArray = $tenant.Split(".")
-                $tenant = ($charArray[$charArray.IndexOf('sharepoint') - 1])
-                $adminSharePointUrl = "https://$tenant-admin.sharepoint.com"
-            }
-            ElseIf ($tenant.Contains('-admin.sharepoint.com')) {
-                $adminSharePointUrl = $tenant
+        Try {
+            If ($tenant -eq "") {
+                $tenant = Read-Host -Prompt "Please enter the name of your SharePoint Online tenant, eg for 'https://contoso.sharepoint.com' just enter 'contoso'."
+                $tenant = $tenant.Trim()
+                If (($tenant.Contains("sharepoint")) -and (-not $tenant.Contains('-admin'))) {
+                    $tenant = $tenant.trim("https://")
+                    $charArray = $tenant.Split(".")
+                    $tenant = ($charArray[$charArray.IndexOf('sharepoint') - 1])
+                    $adminSharePointUrl = "https://$tenant-admin.sharepoint.com"
+                }
+                ElseIf ($tenant.Contains('-admin.sharepoint.com')) {
+                    $adminSharePointUrl = $tenant
+                }
+                Else {
+                    $adminSharePointUrl = "https://$tenant-admin.sharepoint.com"
+                }
             }
             Else {
                 $adminSharePointUrl = "https://$tenant-admin.sharepoint.com"
             }
-        }
-        Else {
-            $adminSharePointUrl = "https://$tenant-admin.sharepoint.com"
-        }
-        #Connect to site collection
+            #Connect to site collection
         
-        Write-Host "Enter SharePoint credentials(your email address for SharePoint Online):" -ForegroundColor Green
-        #Connect-SPOService -Url $adminSharePointUrl
-        Connect-PnPOnline -Url $adminSharePointUrl -SPOManagementShell -ClearTokenCache
-        #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
-        Start-Sleep -Seconds 3
-        Pause
+            Write-Host "Enter SharePoint credentials(your email address for SharePoint Online):" -ForegroundColor Green
+            #Connect-SPOService -Url $adminSharePointUrl
+            Connect-PnPOnline -Url $adminSharePointUrl -SPOManagementShell -ClearTokenCache
+            #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
+            Start-Sleep -Seconds 3
+            Get-PnPWeb
+            Pause
+            $filler = "Testing connection with 'Get-PnPWeb'..."
+            Write-Log -Level Info -Message $filler
+            Write-Host $filler
+        }
+        Catch [System.Management.Automation.ParameterBindingException]{
+            If ($($_.Exception.Message) -like "A parameter cannot be found that matches parameter name 'SPOManagementShell'.") {
+                Write-Log -Level Warn "Cannot authenticate using PnP and SharePoint Online Management Shell. Please check which version of SharePoint PnP PowerShell is installed, and that the SharePoint Online Management Shell is installed."
+            }
+            Throw
+        }
+
+        Catch [System.Net.WebException] {
+            If ($($_.Exception.Message) -like "*(401) Unauthorized*") {
+                Write-Log -Level Warn "Cannot authenticate with SharePoint Admin Site. Please check if an authentication prompt appeared on your machine prior to the last interaction with this script."
+            }
+            Throw
+        }
     }
 
     #Facilitates connection to the SharePoint Online site collections through an OAUTH 2.0 token
