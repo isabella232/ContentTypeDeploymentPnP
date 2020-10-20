@@ -95,12 +95,13 @@ Try {
     Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
 
     Write-Host "Beginning script. `nLogging script actions to $script:logPath" -ForegroundColor Cyan
+    Write-Host "Performing Pre-Requisite checks, please wait..." -ForeGroundColor Yellow
     Start-Sleep -Seconds 3
 
     #Check for module versions of PnP / SPOMS
     Try {
         Write-Host "Checking if PnP / SPOMS installed via Module..." -ForegroundColor Cyan
-        $pnpModule = Get-Module SharePointPnPPowerShell* | Select-Object Name, Version
+        $pnpModule = Get-InstalledModule SharePointPnPPowerShell* | Select-Object Name, Version
         $spomsModule = Get-InstalledModule Microsoft.Online.SharePoint.PowerShell | Select-Object Name, Version
     }
     Catch {
@@ -778,6 +779,12 @@ Try {
                 #Online
                 Write-Log -Level Info -Message "User has selected Option 1 for SPO."
                 Clear-Host
+
+                If((($pnpModule -notlike "*Online*") -or ($null -eq $pnpModule)) -and (($pnpMSI -notlike "*Online*") -or ($null -eq $pnpMSI))){
+                    Write-Log -Level Warn -Message "SharePoint Online selected for deployment, but SharePoint Online PnP CmdLets not installed. Please check installed version before continuing."
+                    Pause
+                }
+
                 #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
                 EnumerateSitesDocLibs
                 #Connect to SharePoint Online, using SharePoint Management Shell against the Admin site
@@ -797,7 +804,7 @@ Try {
                 Else {
                     ConnectToSharePointOnlineAdmin
                 }
-                Pause
+                
                 Deploy
             }
             's' {
@@ -824,7 +831,13 @@ Try {
             '2' {
                 #On-Premises
                 Write-Log -Level Info -Message "User has selected Option 2 for SP On Prem."
-                cls
+                Clear-Host
+
+                If(($pnpModule -like "*Online*") -or ($pnpMSI -like "*Online*")){
+                    Write-Log -Level Warn -Message "SharePoint On-Premises selected for deployment, but SharePoint Online PnP CmdLets installed. Please check installed version before continuing."
+                    Pause
+                }
+
                 #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
                 EnumerateSitesDocLibs
                 #Connect to SharePoint On-Premises, specifically the root site so we can iterate over the site collections
