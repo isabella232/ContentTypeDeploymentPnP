@@ -4,7 +4,7 @@
 #>
 $ErrorActionPreference = 'Stop'
 
-#Columns to add to the Email View if we are creating one. Edit as required.
+#Columns to add to the Email View if we are creating one. Edit as required based on Internal Naming
 [string[]]$script:emailViewColumns = @("EmHasAttachments","EmSubject","EmTo","EmDate","EmFromName")
 
 $script:logFile = "OPSScriptLog.txt"
@@ -108,7 +108,7 @@ Try {
         $spomsModule = Get-InstalledModule Microsoft.Online.SharePoint.PowerShell | Select-Object Name, Version
     }
     Catch {
-        #Couldn't check PNP or SPOMS Module versions
+        #Couldn't check PNP or SPOMS Module versions, Package Manager may be absent
     }
     Finally {
         Write-Log -Level Info -Message "PnP Module Installed: $pnpModule"
@@ -118,8 +118,8 @@ Try {
     #Check for MSI versions of PnP / SPOMS
     Try {
         Write-Host "Checking if PnP / SPOMS installed via MSI..." -ForegroundColor Cyan
-        $pnpMSI = Get-WmiObject Win32_Product | ? {$_.Name -match "PnP PowerShell*"} | Select-Object Name, Version
-        $spomsMSI = Get-WmiObject Win32_Product | ? {$_.Name -match "SharePoint Online Management Shell"} | Select-Object Name, Version
+        $pnpMSI = Get-WmiObject Win32_Product | Where-Object {$_.Name -match "PnP PowerShell*"} | Select-Object Name, Version
+        $spomsMSI = Get-WmiObject Win32_Product | Where-Object {$_.Name -match "SharePoint Online Management Shell"} | Select-Object Name, Version
     }
     Catch {
         #Couldn't check PNP or SPOMS MSI versions
@@ -127,6 +127,11 @@ Try {
     Finally {
         Write-Log -Level Info -Message "PnP MSI Installed: $pnpMSI"
         Write-Log -Level Info -Message "SPOMS MSI Installed: $spomsMSI"
+    }
+
+    If (($null -ne $pnpModule.Count) -or ((0 -ne $pnpMSI.Count) -and (1 -ne $pnpMSI.Count))) {
+        Write-Log -Level Warn -Message "Multiple versions of PnP may be installed. This is not supported by PnP and will likely cause issues when running this script.`nPlease uninstall the versions not applicable to your SharePoint version and re-run this script."
+        Pause
     }
 
     $preReqMissing = $false
@@ -142,9 +147,6 @@ Try {
         Write-Host "`nPlease ensure you have checked and installed the pre-requisites listed in the GitHub documentation prior to running this script."
         Write-Host "!!! If pre-requisites for the Content Type Deployment have not been completed this script/process may fail !!!" -ForegroundColor Yellow
         Pause
-    }
-    Else {
-        Write-Host "Pre-requisites installed!" -ForegroundColor Green
     }
     Start-Sleep -Seconds 2
 
@@ -501,7 +503,6 @@ Try {
             $rawXml = Get-Content $script:columnsXMLPath
         
             #To fix certain compatibility issues between site template types, we will just pull the Field XML from the template
-            $i = 1
             ForEach ($line in $rawXml) {
                 Try {
                     If (($line.ToString() -match 'Name="Em') -or ($line.ToString() -match 'Name="Doc')) {
@@ -679,7 +680,7 @@ Try {
             
             #Get the Content Type Object for 'Document' from SP, we will use this as the parent Content Type for our email Content Type
             $DocCT = Get-PnPContentType -Identity "Document"
-            If ($DocCT -eq $null) {
+            If ($null -eq $DocCT) {
                 $filler = "Couldn't get 'Document' Site Content Type in $siteName. Skipping Site Collection: $siteName"
                 Write-Log -Level Warn -Message $filler
                 Pause
@@ -695,7 +696,7 @@ Try {
                 
                     #If Content Type object returned is null, assume Content Type does not exist, create it. 
                     #If it does exist and we just failed to find it, this will throw exceptions for 'Duplicate Content Type found', and then continue.
-                    If ($foundContentType -eq $null) {
+                    If ($null -eq $foundContentType) {
                         $filler = "Couldn't find Content Type '$ct', might not exist"
                         Write-Host $filler -ForegroundColor Red
                         Write-Log -Level Info -Message $filler
@@ -872,7 +873,7 @@ Try {
             'c' {
                 #clear logins
                 Write-Log -Level Info -Message "User has selected Option C for clear logins."
-                cls
+                Clear-Host
                 Try {
                     Disconnect-PnPOnline
                     Write-Host "Cleared PnP Connection!"
