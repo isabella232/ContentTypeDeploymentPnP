@@ -412,6 +412,7 @@ Try {
     }
 
     #Facilitates connection to the SharePoint Online site collections through an OAUTH 2.0 token
+    #BROKEN AS OF 13/11/2020
     function ConnectToSharePointOnlineOAuth([string]$rootSharePointUrl) {
         #Prompt for SharePoint Root Site Url
         If ($rootSharePointUrl -eq "") {
@@ -846,6 +847,8 @@ Try {
                 #This will possibly not prompt for credentials
                 Deploy
             }
+            <#
+            BROKEN AS OF 13/11/2020
             't' {
                 #Online
                 Write-Log -Level Info -Message "User has selected Option T for token auth."
@@ -857,6 +860,7 @@ Try {
                 ConnectToSharePointOnlineOAuth
                 Deploy
             }
+            #>
             '2' {
                 #On-Premises
                 Write-Log -Level Info -Message "User has selected Option 2 for SP On Prem."
