@@ -387,11 +387,12 @@ Try {
             Connect-PnPOnline -Url $adminSharePointUrl -SPOManagementShell -ClearTokenCache
             #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
             Start-Sleep -Seconds 3
-            Get-PnPWeb
             Pause
+            
             $filler = "Testing connection with 'Get-PnPWeb'..."
             Write-Log -Level Info -Message $filler
             Write-Host $filler
+            Get-PnPWeb
         }
         Catch [System.Management.Automation.ParameterBindingException]{
             If ($($_.Exception.Message) -like "A parameter cannot be found that matches parameter name 'SPOManagementShell'.") {
