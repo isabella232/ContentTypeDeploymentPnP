@@ -41,6 +41,7 @@ You will need to install the the cmdlets on the machine you are running the scri
     > ![](./README-Images/powershellAdmin.png)
 	
 * [SharePoint Online Management Shell](https://docs.microsoft.com/en-us/powershell/sharepoint/sharepoint-online/connect-sharepoint-online?view=sharepoint-ps) - Required to Authenticate against your Admin Site and access the listed Site Collections through said authentication. (For SharePoint Online only)
+	> ![](./README-Images/installSPOMS.png)
 
 ### Assumptions and Considerations
 
