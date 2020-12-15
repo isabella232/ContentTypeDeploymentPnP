@@ -117,19 +117,19 @@ Try {
     #Contains all our Site Collections as siteCol objects
     $script:siteColsHT = @{ }
 
-    #Flag for whether we are working in SharePoint Online or on-premises.
-    [boolean]$script:isSPOnline = $true
-
-    #Flag for whether we create default email views or not, and if so what name to use
-    [boolean]$script:createDefaultViews = $false
-    $script:emailViewName = $null
+    #Flag for whether we create  email views or not, and if so what name to use
+    [boolean]$script:createEmailViews = $false
+    [string]$script:emailViewName = "Emails"
+    [boolean]$script:emailViewDefault = $true
 
     #Flag for whether we automatically create the OnePlaceMail Email Columns
-    [boolean]$script:createEmailColumns = $false
+    [boolean]$script:createEmailColumns = $true
 
     #Name of Column group containing the Email Columns, and an object to contain the Email Columns
-    $script:groupName = $null
+    [string]$script:groupName = "OnePlace Solutions"
     $script:emailColumns = $null
+
+    $script:csvFilePath = ""
 
     #Contains all the data we need relating to the Site Collection we are working with, including the Document Libraries and the Site Content Type names
     class siteCol {
@@ -263,6 +263,7 @@ Try {
             $null = $FileBrowser.ShowDialog()
             
             $csvFile = $FileBrowser.FileName
+            $script:csvFilePath = $csvFile
             Write-Log -Level Info -Message "Using CSV at path '$csvFile'"
         }
 
@@ -410,15 +411,21 @@ Try {
 
     function CreateEmailView([string]$library, [string]$web) {
         Try {
-            If ($script:createDefaultViews) {
+            If ($script:createEmailViews) {
                 Try {
                     $view = Get-PnPView -List $libName -Identity $script:emailViewName -Web $web -ErrorAction Stop
                     Write-Host "View '$script:emailViewName' in Document Library '$libName' already exists, skipping." -ForegroundColor Green
                 }
                 Catch [System.NullReferenceException]{
                     #View does not exist, this is good
-                    Write-Host "Adding Default View '$script:emailViewName' to Document Library '$libName'." -Foregroundcolor Yellow
-                    $view = Add-PnPView -List $libName -Title $script:emailViewName -Fields $script:emailViewColumns -SetAsDefault -RowLimit 100 -Web $web -ErrorAction Continue
+                    Write-Host "Adding Email View '$script:emailViewName' to Document Library '$libName'." -Foregroundcolor Yellow
+                    If($script:emailViewDefault) {
+                        $view = Add-PnPView -List $libName -Title $script:emailViewName -Fields $script:emailViewColumns -SetAsDefault -RowLimit 100 -Web $web -ErrorAction Continue
+                    }
+                    Else {
+                        Write-Host "Email View will be created as default view"
+                        $view = Add-PnPView -List $libName -Title $script:emailViewName -Fields $script:emailViewColumns -RowLimit 100 -Web $web -ErrorAction Continue
+                    }
                     #Let SharePoint catch up for a moment
                     Start-Sleep -Seconds 2
                     $view = Get-PnPView -List $libName -Identity $script:emailViewName -Web $web -ErrorAction Stop
@@ -441,77 +448,21 @@ Try {
         Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
         Write-Host 'Welcome to the OnePlace Solutions Content Type Deployment Script' -ForegroundColor Green
         Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
-        Write-Host 'Please make a selection:' -ForegroundColor Yellow
-        Write-Host "1: SharePoint Online (365)" 
-        Write-Host "Q: Press 'Q' to quit." 
+        Write-Host 'Please make a selection to set, toggle, change or execute:' -ForegroundColor Yellow
+        Write-Host "1: Select CSV file. Path: $($script:csvFilePath)"
+        Write-Host "2: Enable Email Column Creation: $($script:createEmailColumns)"
+        Write-Host "3: Email Column Group: $($script:groupName)"
+        Write-Host "4: Enable Email View Creation: $($script:createEmailViews)"
+        Write-Host "5: Email View Name: $($script:emailViewname)"
+        Write-Host "6: Set View '$($script:emailViewName)' as default: $($script:emailViewDefault)"
+        Write-Host "7: Deploy"
+        Write-Host "Q: Press 'Q' to quit."
     }
 
     #Menu to check if the user wants us to create a default Email View in the Document Libraries
-    function emailViewMenu {
-        $script:emailViewName = $null
-        do { 
-            Write-Host "Would you like to create an Email View in your Document Libraries?"
-            Write-Host "N: No" 
-            Write-Host "Y: Yes"
-            Write-Host "Q: Press 'Q' to quit."  
-            $input = Read-Host "Please select an option" 
-            switch ($input) { 
-                'N' {
-                    $script:createDefaultViews = $false
-                }
-                'Y' {
-                    $script:createDefaultViews = $true
-                    $script:emailViewName = Read-Host -Prompt "Please enter the name for the Email View to be created (leave blank for default 'Emails')"
-
-                    If ($script:emailViewName.Length -eq 0) { $script:emailViewName = "Emails" }
-                    Write-Host "View will be created with name '$script:emailViewName' in listed Document Libraries in the CSV"
-                }
-                'q' { Exit }
-            }
-        } 
-        until(($input -eq 'q') -or ($script:createDefaultViews -ne $null))
-
-        Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
-    }
-
-    function emailColumnsMenu {
-        $script:groupName = $null
-        do { 
-            Write-Host "Would you like to automatically add the OnePlaceMail Email Columns to the listed Site Collections?"
-            Write-Host "N: No" 
-            Write-Host "Y: Yes"
-            Write-Host "Q: Press 'Q' to quit."  
-            $input = Read-Host "Please select an option" 
-            $input = $input[0]
-
-            switch ($input) { 
-                'N' {
-                    $script:createEmailColumns = $false
-                    #Get the Group name containing the OnePlaceMail Email Columns for use later per site, default is 'OnePlaceMail Solutions'
-                    $script:groupName = Read-Host -Prompt "Please enter the Group name containing the OnePlaceMail Email Columns in your SharePoint Site Collections (leave blank for default 'OnePlace Solutions')"
-                    If ($script:groupName.Length -eq 0) { $script:groupName = "OnePlace Solutions" }
-                    Write-Host "Will check for columns under group '$script:groupName'"
-                }
-                'Y' {
-                    $script:createEmailColumns = $true
-                    #Get the Group name we will create the OnePlaceMail Email Columns in for use later per site, default is 'OnePlaceMail Solutions'
-                    $script:groupName = Read-Host -Prompt "Please enter the Group name to create the OnePlaceMail Email Columns in, in your SharePoint Site Collections (leave blank for default 'OnePlace Solutions')"
-                    If ($script:groupName.Length -eq 0) { $script:groupName = "OnePlace Solutions" }
-                    Write-Host "Will create and check for columns under group '$script:groupName'"
-                }
-                'q' { Exit }
-            }
-        } 
-        until(($input -eq 'q') -or ($null -ne $script:createEmailColumns))
-
-        Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
-    }
 
     function Deploy {
         Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
-
-        emailColumnsMenu
-        emailViewMenu
 
         #Go through our siteCol objects in siteColsHT
         ForEach ($site in $script:siteColsHT.Values) {
@@ -528,7 +479,7 @@ Try {
             Try {
                 Write-Log -Level Info -Message "Connecting to $siteName using PnP Management Shell"
                 Connect-pnpOnline -url $site.url -PnPManagementShell
-
+                Start-Sleep -Seconds 5
                 #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
                 Get-PnPWeb -ErrorAction Continue
                 Write-Log -Level Info -Message "Authenticated"
@@ -656,19 +607,6 @@ Try {
                 CreateEmailView -library $libName -web $site.web
             }
             Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
-
-            Try {
-                If ($script:usingTokenAuth) {
-                    #refresh our token if we are using one
-                    $script:token = Get-PnPAccessToken
-                    Write-Log -Level Info -Message "Refreshing Access Token"
-                }
-            }
-            Catch {
-                Write-Log -level Warn -Message "Failed to refresh PnP Auth Token, will attempt to continue:`n"
-                Write-Log -level Info -Message $_
-            }
-        
         }   
         Write-Host "Deployment complete! Please check your SharePoint Environment to verify completion. If you would like to copy the output above, do so now before pressing 'Enter'." 
         Write-Log -Level Info -Message "Deployment complete." 
@@ -682,32 +620,63 @@ Try {
         $input = Read-Host "Please select an option" 
         switch ($input) { 
             '1' {
-                #Online
-                Write-Log -Level Info -Message "User has selected Option 1 for SPO."
-                Clear-Host
-
-                #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
+                Write-Log "User has selected Option $($input)"
                 EnumerateSitesDocLibs
-                #Connect to SharePoint Online, using SharePoint Management Shell against the Admin site
-                If("" -ne $script:extractedTenant) {
-                    Write-Host "`nExtracted Tenant Name '$script:extractedTenant' from CSV, is this correct?"
-                    Write-Host "N: No" 
-                    Write-Host "Y: Yes"
-                    $otherInput = Read-Host "Please select an option" 
-                    If($otherInput[0] -eq 'Y') {
-                        Write-Log -Level Info -Message "User has confirmed extracted Tenant name."
-                        ConnectToSharePointOnlineAdmin -Tenant $script:extractedTenant
+            }
+            '2' {
+                Write-Log "User has selected Option $($input)"
+                $script:createEmailColumns = -not $script:createEmailColumns
+            }
+            '3' {
+                Write-Log "User has selected Option $($input)"
+                $script:groupName = Read-Host -Prompt "`nPlease enter a Group name to check for or create Email columns in. Current value: $($script:groupName)"
+                If("" -eq $script:groupName) {
+                    $script:groupName = "OnePlace Solutions"
+                }
+            }
+            '4' {
+                Write-Log "User has selected Option $($input)"
+                $script:createEmailViews = -not $script:createEmailViews
+            }
+            '5' {
+                Write-Log "User has selected Option $($input)"
+                $script:emailViewname = Read-Host -Prompt "`nPlease enter a View name for the email view (if being created). Current value: $($script:emailViewname)"
+                If("" -eq $script:emailViewname) {
+                    $script:emailViewname = "Emails"
+                }
+            }
+            '6' {
+                Write-Log "User has selected Option $($input)"
+                $script:emailViewDefault = -not $script:emailViewDefault
+            }
+            '7' {
+                Write-Log "User has selected Option $($input)"
+                Clear-Host
+                If("" -ne $script:csvFilePath) {
+                    #Connect to SharePoint Online, using SharePoint Management Shell against the Admin site
+                    If("" -ne $script:extractedTenant) {
+                        Write-Host "`nExtracted Tenant Name '$script:extractedTenant' from CSV, is this correct?"
+                        Write-Host "N: No" 
+                        Write-Host "Y: Yes"
+                        $otherInput = Read-Host "Please select an option" 
+                        If($otherInput[0] -eq 'Y') {
+                            Write-Log -Level Info -Message "User has confirmed extracted Tenant name."
+                            ConnectToSharePointOnlineAdmin -Tenant $script:extractedTenant
+                        }
+                        Else {
+                            ConnectToSharePointOnlineAdmin
+                        }
                     }
                     Else {
                         ConnectToSharePointOnlineAdmin
                     }
+                    
+                    Deploy
                 }
                 Else {
-                    ConnectToSharePointOnlineAdmin
+                    Write-Log -Level Warn -Message "No CSV file has been defined. Please select Option 1 and select your CSV file."
+                    Pause
                 }
-                
-                Deploy
-            
             }
             'c' {
                 #clear logins
@@ -722,8 +691,7 @@ Try {
                 showEnvMenu
             }
             'q' { return }
-        } 
-        pause 
+        }
     } 
     until($input -eq 'q') {
     }
@@ -742,6 +710,6 @@ Finally {
         Disconnect-PnPOnline
     }
     Catch {
-        #Sink everything, this is just trying to tidy up
+        #Sink everything, this is just trying to tidy up any open PnP connections
     }
 }
