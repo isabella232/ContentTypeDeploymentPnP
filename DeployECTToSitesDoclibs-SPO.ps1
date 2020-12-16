@@ -711,7 +711,7 @@ Try {
                     Write-Log "Create Email Columns: $script:createEmailColumns"
                     Write-Log "Email Columns to create/find under Group: $script:columnGroupName"
 
-                    #Deploy
+                    Deploy
                 }
             }
             'c' {
