@@ -128,7 +128,7 @@ Try {
     #Flag for whether we create  email views or not, and if so what name to use
     [boolean]$script:createEmailViews = $false
     [string]$script:emailViewName = "Emails"
-    [boolean]$script:emailViewDefault = $true
+    [boolean]$script:emailViewDefault = $false
 
     #Flag for whether we automatically create the OnePlaceMail Email Columns
     [boolean]$script:createEmailColumns = $true
@@ -254,7 +254,9 @@ Try {
 
         [void]addContentTypesToDocumentLibariesSPO() {
             Write-Log "Adding the Content Types to the Document Libraries in SPO..."
-            $this.documentLibraries.Values | ForEach-Object {$_.addContentTypeInSPO}
+            ForEach($lib in $this.documentLibraries.Values) {
+                $lib.addContentTypeInSPO()
+            }
         }
 
         #Creates the Email Columns in the given Site Collection. Taken from the existing OnePlaceSolutions Email Column deployment script
@@ -303,7 +305,12 @@ Try {
                         }
                     }
                     Catch {
-                        Write-Log -Level Error -Message "Error creating Email Column. Error: $($_.Exception.Message)"
+                        If($($_.Exception.Message) -match 'duplicate') {
+                            Write-Log -Level Warn -Message "Duplicate fields detected. $($_.Exception.Message). Continuing script."
+                        }
+                        Else {
+                            Write-Log -Level Error -Message "Error creating Email Column. Error: $($_.Exception.Message)"
+                        }
                     }
                 }
             }
@@ -369,11 +376,11 @@ Try {
                                 $i++
                             }
                             If (($false -eq $emSubjectFound) -or ($numColumns -ne 35)) {
-                                Throw "Not all Email Columns present. Please check you have added the columns to the Site Collection or elected to do so when prompted with this script."
+                                Write-Log -Level Warn -Message "Not all Email Columns present. Please check you have added the columns to the Site Collection or elected to do so when prompted with this script."
                             }
                         }
                         Catch {
-                            Write-Log -Level Warn -Message "Error adding email columns to Site Content Type '$ct'."
+                            Write-Log -Level Error -Message "Error adding email columns to Site Content Type '$ct': $($_.Exception.Message)"
                         }
                         Finally {
                             Write-Progress -Activity "Done adding Columns" -Completed
@@ -428,30 +435,36 @@ Try {
                     Write-Log -Level Error -Message "Error adding Site Content Type '$($_)' to Document Library '$($this.name)': $($_.Exception.Message)"
                 }
             }
-            createEmailView -viewName $script:emailViewName
+
+            If($script:createEmailViews) {
+                $this.createEmailView($script:emailViewName)
+            }
         }
 
         [void]createEmailView([string]$viewName) {
             Try {
                 Try {
                     $view = Get-PnPView -List $this.name -Identity $viewName -Web $this.web -ErrorAction Stop
-                    Write-Log "View '$viewName' in Document Library '$($this.name)' already exists, skipping."
+                    Write-Log "View '$viewName' in Document Library '$($this.name)' already exists, will set as Default View if required but otherwise skipping."
+                    If($script:emailViewDefault) {
+                        Set-PnPView -List $this.name -Identity $viewName -Values @{DefaultView =$True}
+                    }
                 }
                 Catch [System.NullReferenceException]{
                     #View does not exist, this is good
                     Write-Log "Adding Email View '$viewName' to Document Library '$($this.name)'."
                     If($script:emailViewDefault) {
-                        Write-Log "Email View will not be created as default view..."
+                        Write-Log "Email View will be created as default view..."
                         $view = Add-PnPView -List $this.name -Title $viewName -Fields $script:emailViewColumns -SetAsDefault -RowLimit 100 -Web $this.web -ErrorAction Continue
                     }
                     Else {
-                        Write-Log "Email View will be created as default view..."
+                        Write-Log "Email View will not be created as default view..."
                         $view = Add-PnPView -List $this.name -Title $viewName -Fields $script:emailViewColumns -RowLimit 100 -Web $this.web -ErrorAction Continue
                     }
                     #Let SharePoint catch up for a moment
                     Start-Sleep -Seconds 2
                     $view = Get-PnPView -List $this.name -Identity $viewName -Web $this.web -ErrorAction Stop
-                    Write-Log "Email View $($viewName) created successfully."
+                    Write-Log "Email View $($viewName) created successfully. As Default? $($script:emailViewDefault)"
                 }
                 Catch{
                     Throw
@@ -681,7 +694,7 @@ Try {
                         Write-Host "Y: Yes"
                         $otherInput = Read-Host "Please select an option" 
                         If($otherInput[0] -eq 'Y') {
-                            Write-Log -Level Info -Message "User has confirmed extracted Tenant name."
+                            Write-Log -Level Info -Message "User has confirmed extracted Tenant name '$($script:extractedTenant)'."
                             ConnectToSharePointOnline -Tenant $script:extractedTenant
                         }
                         Else {
@@ -691,8 +704,14 @@ Try {
                     Else {
                         ConnectToSharePointOnline
                     }
-                    
-                    Deploy
+                    Write-Log "Create Email Views: $script:createEmailViews"
+                    Write-Log "Email View Name:$script:emailViewName"
+                    Write-Log "Email View set as Default: $script:emailViewDefault"
+                    Write-Log "Create View with columns: $script:emailViewColumns"
+                    Write-Log "Create Email Columns: $script:createEmailColumns"
+                    Write-Log "Email Columns to create/find under Group: $script:columnGroupName"
+
+                    #Deploy
                 }
             }
             'c' {
@@ -716,19 +735,21 @@ Try {
     }
 }
 Catch {
-    $exType = $($_.Exception.GetType().FullName)
-    $exMessage = $($_.Exception.Message)
-    Write-Log -Level Error -Message "Caught an exception. Exception Type: $exType. $exMessage"
+    Write-Log -Level Error -Message "Caught an exception at the bottom level. `nException Type: $($_.Exception.GetType().FullName) `nException Message: $($_.Exception.Message)"
     Write-Host "`n!!! Please send the log file at '$script:logPath' to 'support@oneplacesolutions.com' for assistance !!!" -ForegroundColor Yellow
     Write-Host "`n!!! Please send the log file at '$script:logPath' to 'support@oneplacesolutions.com' for assistance !!!" -ForegroundColor Red
     Write-Host "`n!!! Please send the log file at '$script:logPath' to 'support@oneplacesolutions.com' for assistance !!!" -ForegroundColor Cyan
     Pause
 }
 Finally {
-    Try {
-        Disconnect-PnPOnline
+    #If running in ISE let's not cut off the PnP sessions
+    If($host.name -notmatch 'ISE') {
+        Try {
+            Disconnect-PnPOnline
+        }
+        Catch {
+            #Sink everything, this is just trying to tidy up any open PnP connections
+        }
     }
-    Catch {
-        #Sink everything, this is just trying to tidy up any open PnP connections
-    }
+
 }
