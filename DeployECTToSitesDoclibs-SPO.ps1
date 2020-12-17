@@ -137,18 +137,19 @@ Try {
     [string]$script:columnGroupName = "OnePlace Solutions"
     $script:emailColumns = $null
 
-    $script:csvFilePath = ""
+    [string]$script:csvFilePath = ""
 
     #Contains all the data we need relating to the Site Collection we are working with, including the Document Libraries and the Site Content Type names
     class siteCol {
-        [String]$name
-        [String]$url
-        [String]$web
-        [Hashtable]$documentLibraries = @{ }
-        [Array]$contentTypes
-        [Boolean]$isSubSite
+        [string]$name
+        [string]$url
+        [string]$web
+        [hashtable]$documentLibraries = @{ }
+        [array]$contentTypes
+        [boolean]$isSubSite
+        [boolean]$createColumns
 
-        siteCol([string]$name, $url) {
+        siteCol([string]$name, [string]$url, [boolean]$columns) {
             If ($name -eq "") {
                 $this.name = $url
             }
@@ -156,6 +157,9 @@ Try {
                 $this.name = $name
             }
             Write-Log "Creating siteCol object with name '$($this.name)'"
+
+            $this.createColumns = $columns
+            Write-Log "Are we going to create columns in this siteCol: $($this.createColumns)"
 
             $this.contentTypes = @()
 
@@ -225,15 +229,15 @@ Try {
             }
         }
 
-        [void]addContentTypeToDocumentLibraryObj($contentTypeName, [string]$docLibName) {
+        [void]addContentTypeToDocumentLibraryObj([string]$contentTypeName,[string]$docLibName,[string]$viewName,[boolean]$viewDefault) {
             #Check we aren't working without a Document Library name, otherwise assume that we just want to add a Site Content Type
-            If (($null -ne $docLibName) -and ($docLibName -ne "")) {
+            If (-not [string]::IsNullOrWhiteSpace($docLibName)) {
                 If ($this.documentLibraries.ContainsKey($docLibName)) {
                     $this.documentLibraries.$docLibName
                     Write-Log "Document Library '$docLibName' already listed for this Site Collection."
                 }
                 Else {
-                    $tempDocLib = [docLib]::new($docLibName,$($this.web))
+                    $tempDocLib = [docLib]::new($docLibName,$($this.web),$viewName,$viewDefault)
                     $this.documentLibraries.Add($docLibName, $tempDocLib)
                     Write-Log "Document Library '$docLibName' not listed for this Site Collection, added."
                 }
@@ -248,7 +252,7 @@ Try {
                 Write-Log "Content Type '$contentTypeName' not listed in Site Content Types, adding."
             }
             Else {
-                Write-Log "Content Type '$contentTypeName' listed in Site Content Types."
+                Write-Log "Content Type '$contentTypeName' already listed in Site Content Types."
             }
         }
 
@@ -261,58 +265,63 @@ Try {
 
         #Creates the Email Columns in the given Site Collection. Taken from the existing OnePlaceSolutions Email Column deployment script
         [void]createEmailColumns() {
-            Try {
-                $tempColumns = Get-PnPField -Group $script:columnGroupName
-                $script:emailColumnCount = 0
-                ForEach ($col in $tempColumns) {
-                    If (($col.InternalName -match 'Em') -or ($col.InternalName -match 'Doc')) {
-                        $script:emailColumnCount++
+            If($this.createColumns) {
+                Try {
+                    $tempColumns = Get-PnPField -Group $script:columnGroupName
+                    $script:emailColumnCount = 0
+                    ForEach ($col in $tempColumns) {
+                        If (($col.InternalName -match 'Em') -or ($col.InternalName -match 'Doc')) {
+                            $script:emailColumnCount++
+                        }
+                    }
+                }
+                Catch {
+                    #This is fine, we will just try to add the columns anyway
+                    Write-Log -Level Warn -Message "Couldn't check email columns, will attempt to add them anyway..."
+                }
+
+                #Check if we have 35 columns in our Column Group
+                If ($script:emailColumnCount -eq 35) {
+                    Write-Log "All Email columns already present in group '$script:columnGroupName', skipping adding."
+                }
+                #Create the Columns if we didn't find 35
+                Else {
+                    $script:columnsXMLPath = "$env:temp\email-columns.xml"
+                    If (-not (Test-Path $script:columnsXMLPath)) {
+                        #From 'https://github.com/OnePlaceSolutions/EmailColumnsPnP/blob/master/installEmailColumns.ps1'
+                        #Download xml provisioning template
+                        $WebClient = New-Object System.Net.WebClient
+                        $downloadUrl = "https://raw.githubusercontent.com/OnePlaceSolutions/EmailColumnsPnP/master/email-columns.xml"    
+                    
+                        Write-Log "Downloading provisioning xml template:" $script:columnsXMLPath
+                        $WebClient.DownloadFile( $downloadUrl, $script:columnsXMLPath )
+                    }
+
+                    #Apply xml provisioning template to SharePoint
+                    Write-Log "Applying email columns template to SharePoint: $($this.url)"
+            
+                    $rawXml = Get-Content $script:columnsXMLPath
+            
+                    #To fix certain compatibility issues between site template types, we will just pull the Field XML entries from the template
+                    ForEach ($line in $rawXml) {
+                        Try {
+                            If (($line.ToString() -match 'Name="Em') -or ($line.ToString() -match 'Name="Doc')) {
+                                $fieldAdded = Add-PnPFieldFromXml -fieldxml $line -ErrorAction Stop | Out-Null
+                            }
+                        }
+                        Catch {
+                            If($($_.Exception.Message) -match 'duplicate') {
+                                Write-Log -Level Warn -Message "Duplicate fields detected. $($_.Exception.Message). Continuing script."
+                            }
+                            Else {
+                                Write-Log -Level Error -Message "Error creating Email Column. Error: $($_.Exception.Message)"
+                            }
+                        }
                     }
                 }
             }
-            Catch {
-                #This is fine, we will just try to add the columns anyway
-                Write-Log -Level Warn -Message "Couldn't check email columns, will attempt to add them anyway..."
-            }
-
-            #Check if we have 35 columns in our Column Group
-            If ($script:emailColumnCount -eq 35) {
-                Write-Log "All Email columns already present in group '$script:columnGroupName', skipping adding."
-            }
-            #Create the Columns if we didn't find 35
             Else {
-                $script:columnsXMLPath = "$env:temp\email-columns.xml"
-                If (-not (Test-Path $script:columnsXMLPath)) {
-                    #From 'https://github.com/OnePlaceSolutions/EmailColumnsPnP/blob/master/installEmailColumns.ps1'
-                    #Download xml provisioning template
-                    $WebClient = New-Object System.Net.WebClient
-                    $downloadUrl = "https://raw.githubusercontent.com/OnePlaceSolutions/EmailColumnsPnP/master/email-columns.xml"    
-                
-                    Write-Log "Downloading provisioning xml template:" $script:columnsXMLPath
-                    $WebClient.DownloadFile( $downloadUrl, $script:columnsXMLPath )
-                }
-
-                #Apply xml provisioning template to SharePoint
-                Write-Log "Applying email columns template to SharePoint: $($this.url)"
-        
-                $rawXml = Get-Content $script:columnsXMLPath
-        
-                #To fix certain compatibility issues between site template types, we will just pull the Field XML entries from the template
-                ForEach ($line in $rawXml) {
-                    Try {
-                        If (($line.ToString() -match 'Name="Em') -or ($line.ToString() -match 'Name="Doc')) {
-                            $fieldAdded = Add-PnPFieldFromXml -fieldxml $line -ErrorAction Stop | Out-Null
-                        }
-                    }
-                    Catch {
-                        If($($_.Exception.Message) -match 'duplicate') {
-                            Write-Log -Level Warn -Message "Duplicate fields detected. $($_.Exception.Message). Continuing script."
-                        }
-                        Else {
-                            Write-Log -Level Error -Message "Error creating Email Column. Error: $($_.Exception.Message)"
-                        }
-                    }
-                }
+                Write-Log "Not creating columns in this siteCol."
             }
         }
         
@@ -393,15 +402,39 @@ Try {
 
     #Contains all the data we need relating to the Document Library we are working with, including the Site Content Type names we are adding to it
     class docLib {
-        [String]$name
-        [Array]$contentTypes
+        [string]$name
+        [array]$contentTypes
         [string]$web
+        [boolean]$createView
+        [string]$viewName
+        [boolean]$viewDefault
 
-        docLib([String]$name,[string]$web) {
-            Write-Log "Creating docLib object with name $name"
+        docLib([String]$name,[string]$web,[string]$viewName,[boolean]$viewDefault) {
+            Write-Log "Creating docLib object with name $name."
             $this.name = $name
             $this.contentTypes = @()
             $this.web = $web
+            If(-not ([string]::IsNullOrWhiteSpace($viewName))) {
+                $this.createView = $true
+                $this.viewName = $viewName
+                $this.viewDefault = $viewDefault
+            }
+            Else {
+                $this.createView = $false
+                $this.viewName = ""
+                $this.viewDefault = ""
+            }
+            
+        }
+
+        docLib([String]$name,[string]$web) {
+            Write-Log "Creating docLib object with name $name, no view settings passed"
+            $this.name = $name
+            $this.contentTypes = @()
+            $this.web = $web
+            $this.createView = $false
+            $this.viewName = ""
+            $this.viewDefault = ""
         }
 
         [void]addContentTypeToObj([string]$contentTypeName) {
@@ -441,38 +474,44 @@ Try {
             }
         }
 
-        [void]createEmailView([string]$viewName) {
-            Try {
+        [void]createEmailView() {
+            If($this.createView) {
                 Try {
-                    $view = Get-PnPView -List $this.name -Identity $viewName -Web $this.web -ErrorAction Stop
-                    Write-Log "View '$viewName' in Document Library '$($this.name)' already exists, will set as Default View if required but otherwise skipping."
-                    If($script:emailViewDefault) {
-                        Set-PnPView -List $this.name -Identity $viewName -Values @{DefaultView =$True}
+                    Try {
+                        #assign any output from SPO to a variable to sink any bugs with PnP
+                        $view = Get-PnPView -List $this.name -Identity $this.viewName -Web $this.web -ErrorAction Stop
+                        Write-Log "View '$($this.viewName)' in Document Library '$($this.name)' already exists, will set as Default View if required but otherwise skipping."
+                        If($this.viewDefault) {
+                            Write-Log "Setting View '$($this.viewName)' as Default"
+                            Set-PnPView -List $this.name -Identity $this.viewName -Values @{DefaultView =$True}
+                        }
                     }
-                }
-                Catch [System.NullReferenceException]{
-                    #View does not exist, this is good
-                    Write-Log "Adding Email View '$viewName' to Document Library '$($this.name)'."
-                    If($script:emailViewDefault) {
-                        Write-Log "Email View will be created as default view..."
-                        $view = Add-PnPView -List $this.name -Title $viewName -Fields $script:emailViewColumns -SetAsDefault -RowLimit 100 -Web $this.web -ErrorAction Continue
+                    Catch [System.NullReferenceException]{
+                        #View does not exist, this is good
+                        Write-Log "Adding Email View '$this.viewName' to Document Library '$($this.name)'."
+                        $view = Add-PnPView -List $this.name -Title $this.viewName -Fields $script:emailViewColumns -RowLimit 100 -Web $this.web -ErrorAction Continue
+                        
+                        #Let SharePoint catch up for a moment
+                        Start-Sleep -Seconds 2
+                        If($this.viewDefault) {
+                            Write-Log "Setting View '$($this.viewName)' as Default"
+                            Set-PnPView -List $this.name -Identity $this.viewName -Values @{DefaultView =$True}
+                        }
+                        
+                        $view = Get-PnPView -List $this.name -Identity $this.viewName -Web $this.web -ErrorAction Stop
+                        Write-Log "Email View '$($this.viewName)' created successfully."
                     }
-                    Else {
-                        Write-Log "Email View will not be created as default view..."
-                        $view = Add-PnPView -List $this.name -Title $viewName -Fields $script:emailViewColumns -RowLimit 100 -Web $this.web -ErrorAction Continue
+                    Catch{
+                        Throw
                     }
-                    #Let SharePoint catch up for a moment
-                    Start-Sleep -Seconds 2
-                    $view = Get-PnPView -List $this.name -Identity $viewName -Web $this.web -ErrorAction Stop
-                    Write-Log "Email View $($viewName) created successfully. As Default? $($script:emailViewDefault)"
+                    
                 }
-                Catch{
-                    Throw
+                Catch {
+                    Write-Log -Level Error -Message "Error checking/creating View '$($this.viewName)' in Document Library '$($this.name)': $($_.Exception.Message)"
                 }
-                
             }
-            Catch {
-                Write-Log -Level Error -Message "Error checking/creating View '$viewName' in Document Library '$($this.name)': $($_.Exception.Message)"
+            Else {
+                Write-Log "Not creating views here"
             }
         }
     }
@@ -501,11 +540,15 @@ Try {
             $csv = Import-Csv -Path $csvFile -ErrorAction Continue
 
             Write-Host "Enumerating Site Collections and Document Libraries from CSV file." -ForegroundColor Yellow
-            foreach ($element in $csv) {
+            ForEach ($element in $csv) {
                 $csv_siteName = $element.SiteName
                 $csv_siteUrl = $element.SiteUrl -replace '\s', '' #remove any whitespace from URL
                 $csv_docLib = $element.DocLib
                 $csv_contentType = $element.CTName
+                $csv_createColumns = $element.CreateColumns
+                $csv_viewDefault = $element.viewDefault
+                $csv_viewName = $element.viewName
+
 
                 If("" -eq $script:extractedTenant) {
                     $script:extractedTenant = $csv_siteUrl  -match 'https://(?<Tenant>.+)\.sharepoint.com'
@@ -514,16 +557,19 @@ Try {
                 }
 
                 #Don't create siteCol objects that do not have a URL, this also accounts for empty lines at EOF
-                If ($csv_siteUrl -ne "") {
+                If (-not ([string]::IsNullOrWhiteSpace($csv_siteUrl))) {
                     #If a name is not defined, use the URL
-                    If ($csv_siteName -eq "") { $csv_siteName = $element.SiteUrl }
+                    If ([string]::IsNullOrWhiteSpace($csv_siteName)) { 
+                        $csv_siteName = $element.SiteUrl 
+                    }
 
                     If ($script:siteColsHT.ContainsKey($csv_siteUrl)) {
-                        $script:siteColsHT.$csv_siteUrl.addContentTypeToDocumentLibraryObj($csv_contentType, $csv_docLib)
+                        #Site Collection already listed, just add the Content Type and the Document Library if required
+                        $script:siteColsHT.$csv_siteUrl.addContentTypeToDocumentLibraryObj($csv_contentType, $csv_docLib, $csv_viewName,$csv_viewDefault)
                     }
                     Else {
-                        $newSiteCollection = [siteCol]::new($csv_siteName, $csv_siteUrl)
-                        $newSiteCollection.addContentTypeToDocumentLibraryObj($csv_contentType, $csv_docLib)
+                        $newSiteCollection = [siteCol]::new($csv_siteName, $csv_siteUrl,$csv_createColumns)
+                        $newSiteCollection.addContentTypeToDocumentLibraryObj($csv_contentType, $csv_docLib, $csv_viewName,$csv_viewDefault)
                         $script:siteColsHT.Add($csv_siteUrl, $newSiteCollection)
                     }
                 }
@@ -575,10 +621,10 @@ Try {
             }
         }
         Catch [System.Net.WebException] {
-            If ($($_.Exception.Message) -like "*(401) Unauthorized*") {
+            If ($($_.Exception.Message) -like "*(401)*") {
                 Write-Log -Level Warn "Cannot authenticate with SharePoint Root Site. Please check if an authentication prompt appeared on your machine prior to the last interaction with this script."
             }
-            ElseIf ($($_.Exception.Message) -like "*(403) Forbidden*") {
+            ElseIf ($($_.Exception.Message) -like "*(403)*") {
                 Write-Log -Level Warn "Cannot login to SharePoint Root Site, Access Denied. Please check the permissions of the credentials/account you are using to authenticate with."
             }
             Throw
@@ -623,11 +669,7 @@ Try {
             $connected = $site.connect()
 
             If($connected) {
-                #Check if we are creating email columns, if so, do so now
-                If ($script:createEmailColumns) {
-                    Write-Log "User has opted to create email columns"
-                    $site.createEmailColumns()
-                }
+                $site.createEmailColumns()
                 $site.createContentTypes()
                 $site.addContentTypesToDocumentLibariesSPO()
             }
