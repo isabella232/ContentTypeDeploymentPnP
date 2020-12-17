@@ -115,23 +115,16 @@ Try {
         $pnpModule = Get-InstalledModule "PnP.PowerShell" | Select-Object Name, Version
     }
     Catch {
-        #Couldn't check PNP Module versions, Package Manager may be absent
+        Write-Log "Couldn't check PNP Module versions, Package Manager may be absent"
     }
     Finally {
         Write-Log "PnP Module Installed: $pnpModule"
+        Start-Sleep -Seconds 2
     }
-
+    
 
     #Contains all our Site Collections as siteCol objects
     $script:siteColsHT = @{ }
-
-    #Flag for whether we create  email views or not, and if so what name to use
-    [boolean]$script:createEmailViews = $false
-    [string]$script:emailViewName = "Emails"
-    [boolean]$script:emailViewDefault = $false
-
-    #Flag for whether we automatically create the OnePlaceMail Email Columns
-    [boolean]$script:createEmailColumns = $true
 
     #Name of Column group containing the Email Columns, and an object to contain the Email Columns
     [string]$script:columnGroupName = "OnePlace Solutions"
@@ -150,7 +143,7 @@ Try {
         [boolean]$createColumns
 
         siteCol([string]$name, [string]$url, [boolean]$columns) {
-            If ($name -eq "") {
+            If ([string]::IsNullOrWhiteSpace($name)) {
                 $this.name = $url
             }
             Else {
@@ -243,16 +236,20 @@ Try {
                 }
                 
                 $this.documentLibraries.$docLibName.addContentTypeToObj($contentTypeName)
-                Write-Log "Listing Content Type '$contentTypeName' for Document Library '$docLibName'."
             }
             
             #If the named Content Type is not already listed in Site Content Types, add it to the Site Content Types
-            If (-not $this.contentTypes.Contains($contentTypeName)) {
-                $this.contentTypes += $contentTypeName
-                Write-Log "Content Type '$contentTypeName' not listed in Site Content Types, adding."
+            If(-not ([string]::IsNullOrWhiteSpace($contentTypeName))) {
+                If (-not $this.contentTypes.Contains($contentTypeName)) {
+                    $this.contentTypes += $contentTypeName
+                    Write-Log "Content Type '$contentTypeName' not listed in Site Content Types, adding."
+                }
+                Else {
+                    Write-Log "Content Type '$contentTypeName' already listed in Site Content Types."
+                }
             }
             Else {
-                Write-Log "Content Type '$contentTypeName' already listed in Site Content Types."
+                Write-Log "No Content Type specified, only adding Site Columns."
             }
         }
 
@@ -318,6 +315,7 @@ Try {
                             }
                         }
                     }
+                    Start-Sleep -Seconds 2
                 }
             }
             Else {
@@ -332,10 +330,9 @@ Try {
                 Write-Log -Level Warn -Message "Email Columns not found in Site Columns group '$script:columnGroupName' for Site Collection '$($this.name)'. Skipping."
             }
             Else {
-                Write-Log "Columns found for group '$script:columnGroupName':"
+                Write-Log "Email Columns found for group '$script:columnGroupName':"
                 $script:emailColumns | Format-Table
-                Write-Host "These Columns will be added to the Site Content Types extracted from your CSV file:"
-                Write-Log "$($this.contentTypes)"
+                Write-Host "The Email Columns will be added to the Site Content Types extracted from your CSV file:"
                 $this.contentTypes | Format-Table
             
                 #Get the Content Type Object for 'Document' from SP, we will use this as the parent Content Type for our email Content Type
@@ -410,14 +407,15 @@ Try {
         [boolean]$viewDefault
 
         docLib([String]$name,[string]$web,[string]$viewName,[boolean]$viewDefault) {
-            Write-Log "Creating docLib object with name $name."
+            Write-Log "`tCreating docLib object with name $name."
             $this.name = $name
             $this.contentTypes = @()
             $this.web = $web
-            If(-not ([string]::IsNullOrWhiteSpace($viewName))) {
+            If((-not ([string]::IsNullOrWhiteSpace($viewName))) -and ("" -ne $viewName)) {
                 $this.createView = $true
                 $this.viewName = $viewName
                 $this.viewDefault = $viewDefault
+                Write-Log "`tView information present. Name: $($this.viewName); Default: $($this.viewDefault)"
             }
             Else {
                 $this.createView = $false
@@ -428,7 +426,7 @@ Try {
         }
 
         docLib([String]$name,[string]$web) {
-            Write-Log "Creating docLib object with name $name, no view settings passed"
+            Write-Log "`tCreating docLib object with name $name, no view settings passed"
             $this.name = $name
             $this.contentTypes = @()
             $this.web = $web
@@ -439,14 +437,11 @@ Try {
 
         [void]addContentTypeToObj([string]$contentTypeName) {
             If (-not $this.contentTypes.Contains($contentTypeName)) {
-                Write-Log "Adding Content Type '$contentTypeName' to '$($this.name)' Document Library Content Types"
+                Write-Log "`tAdding Content Type '$contentTypeName' to '$($this.name)' Document Library Content Types"
                 $this.contentTypes += $contentTypeName
             }
             Else {
-                $temp = $this.name
-                $filler = "Content Type '$contentTypeName' already listed in Document Library $temp"
-                Write-Host $filler -ForegroundColor Red
-                Write-Log -Level Info -Message $filler
+                Write-Log "`tContent Type '$contentTypeName' already listed in Document Library $($this.name)"
             }
         }
 
@@ -485,10 +480,14 @@ Try {
                             Write-Log "Setting View '$($this.viewName)' as Default"
                             Set-PnPView -List $this.name -Identity $this.viewName -Values @{DefaultView =$True}
                         }
+                        Else {
+                            Write-Log "Not Setting View '$($this.viewName)' as Default"
+                        }
                     }
                     Catch [System.NullReferenceException]{
                         #View does not exist, this is good
-                        Write-Log "Adding Email View '$this.viewName' to Document Library '$($this.name)'."
+                        Write-Log "Adding Email View '$($this.viewName)' to Document Library '$($this.name)'."
+                        #assign any output from SPO to a variable to sink any bugs with PnP
                         $view = Add-PnPView -List $this.name -Title $this.viewName -Fields $script:emailViewColumns -RowLimit 100 -Web $this.web -ErrorAction Continue
                         
                         #Let SharePoint catch up for a moment
@@ -496,6 +495,9 @@ Try {
                         If($this.viewDefault) {
                             Write-Log "Setting View '$($this.viewName)' as Default"
                             Set-PnPView -List $this.name -Identity $this.viewName -Values @{DefaultView =$True}
+                        }
+                        Else {
+                            Write-Log "Not Setting View '$($this.viewName)' as Default"
                         }
                         
                         $view = Get-PnPView -List $this.name -Identity $this.viewName -Web $this.web -ErrorAction Stop
@@ -541,16 +543,28 @@ Try {
 
             Write-Host "Enumerating Site Collections and Document Libraries from CSV file." -ForegroundColor Yellow
             ForEach ($element in $csv) {
-                $csv_siteName = $element.SiteName
-                $csv_siteUrl = $element.SiteUrl -replace '\s', '' #remove any whitespace from URL
-                $csv_docLib = $element.DocLib
-                $csv_contentType = $element.CTName
-                $csv_createColumns = $element.CreateColumns
-                $csv_viewDefault = $element.viewDefault
-                $csv_viewName = $element.viewName
+                [string]$csv_siteName = $element.SiteName
+                [string]$csv_siteUrl = $element.SiteUrl -replace '\s', '' #remove any whitespace from URL
+                [string]$csv_docLib = $element.DocLib
+                [string]$csv_contentType = $element.CTName
+                Try{
+                    [boolean]$csv_viewDefault = [System.Convert]::ToBoolean($element.viewDefault)
+                }
+                Catch {
+                    #null values will be treated as $false
+                    [boolean]$csv_viewDefault = $false
+                }
+                Try{
+                    [boolean]$csv_createColumns = [System.Convert]::ToBoolean($element.CreateColumns)
+                }
+                Catch {
+                    #null values will be treated as $false
+                    [boolean]$csv_createColumns = $false
+                }
+                [string]$csv_viewName = $element.viewName
 
 
-                If("" -eq $script:extractedTenant) {
+                If([string]::IsNullOrWhiteSpace($script:extractedTenant)) {
                     $script:extractedTenant = $csv_siteUrl  -match 'https://(?<Tenant>.+)\.sharepoint.com'
                     $script:extractedTenant = $Matches.Tenant
                     Write-Log "Extracted Tenant name '$script:extractedTenant'"
@@ -565,20 +579,21 @@ Try {
 
                     If ($script:siteColsHT.ContainsKey($csv_siteUrl)) {
                         #Site Collection already listed, just add the Content Type and the Document Library if required
-                        $script:siteColsHT.$csv_siteUrl.addContentTypeToDocumentLibraryObj($csv_contentType, $csv_docLib, $csv_viewName,$csv_viewDefault)
+                        $script:siteColsHT.$csv_siteUrl.addContentTypeToDocumentLibraryObj($csv_contentType,$csv_docLib,$csv_viewName,$csv_viewDefault)
                     }
                     Else {
                         $newSiteCollection = [siteCol]::new($csv_siteName, $csv_siteUrl,$csv_createColumns)
-                        $newSiteCollection.addContentTypeToDocumentLibraryObj($csv_contentType, $csv_docLib, $csv_viewName,$csv_viewDefault)
+                        $newSiteCollection.addContentTypeToDocumentLibraryObj($csv_contentType,$csv_docLib,$csv_viewName,$csv_viewDefault)
                         $script:siteColsHT.Add($csv_siteUrl, $newSiteCollection)
                     }
                 }
+                Write-Host "`n"
             }
             Write-Log "Completed Enumerating Site Collections and Document Libraries from CSV file!"
         }
         Catch {
             Write-Log -Level Error -Message "Error parsing CSV file. Is this filepath for a a valid CSV file?"
-            $csvFile
+            Write-Host "`nPATH: $csvFile`n" -ForegroundColor Red
             Throw
         }
         Pause
@@ -609,12 +624,12 @@ Try {
 
             If($currentWeb.url -ne $rootSharePointUrl) {
                 #Connect to site collection
-                Write-Host "Prompting for PnP Management Shell Authentication. Please copy the code displayed into the browser as directed and log in." -ForegroundColor Green
+                Write-Host "Prompting for PnP Management Shell Authentication. Please copy the code displayed into the browser as directed and log in.`nIf nothing happens in the PowerShell session after logging in through the browser, please click in this window and press 'Enter'." -ForegroundColor Green
                 $conn = Connect-PnPOnline -Url $rootSharePointUrl -PnPManagementShell -LaunchBrowser
                 #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
                 Write-Log "Testing connection with 'Get-PnPWeb'..."
                 Start-Sleep -Seconds 3
-                Get-PnPWeb -Connection $conn
+                Get-PnPWeb -Connection $conn | Out-Null
             }
             Else {
                 Write-Log "Already connected to SharePoint with Root URL '$rootSharePointUrl'. Skipping login"
@@ -643,12 +658,7 @@ Try {
         Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
         Write-Host 'Please make a selection to set, toggle, change or execute:' -ForegroundColor Yellow
         Write-Host "1: Select CSV file. Path: $($script:csvFilePath)"
-        Write-Host "2: Enable Email Column Creation: $($script:createEmailColumns)"
-        Write-Host "3: Email Column Group: $($script:columnGroupName)"
-        Write-Host "4: Enable Email View Creation: $($script:createEmailViews)"
-        Write-Host "5: Email View Name: $($script:emailViewname)"
-        Write-Host "6: Set View '$($script:emailViewName)' as default: $($script:emailViewDefault)"
-        Write-Host "7: Deploy"
+        Write-Host "2: Deploy"
         Write-Host "Q: Press 'Q' to quit."
     }
 
@@ -696,32 +706,6 @@ Try {
             }
             '2' {
                 Write-Log "User has selected Option $($input)" -NoOutput
-                $script:createEmailColumns = -not $script:createEmailColumns
-            }
-            '3' {
-                Write-Log "User has selected Option $($input)" -NoOutput
-                $script:columnGroupName = Read-Host -Prompt "`nPlease enter a Group name to check for or create Email columns in. Current value: $($script:columnGroupName)"
-                If([string]::IsNullOrWhiteSpace($script:columnGroupName)) {
-                    $script:columnGroupName = "OnePlace Solutions"
-                }
-            }
-            '4' {
-                Write-Log "User has selected Option $($input)" -NoOutput
-                $script:createEmailViews = -not $script:createEmailViews
-            }
-            '5' {
-                Write-Log "User has selected Option $($input)" -NoOutput
-                $script:emailViewname = Read-Host -Prompt "`nPlease enter a View name for the email view (if being created). Current value: $($script:emailViewname)"
-                If([string]::IsNullOrWhiteSpace($script:emailViewname)) {
-                    $script:emailViewname = "Emails"
-                }
-            }
-            '6' {
-                Write-Log "User has selected Option $($input)" -NoOutput
-                $script:emailViewDefault = -not $script:emailViewDefault
-            }
-            '7' {
-                Write-Log "User has selected Option $($input)" -NoOutput
                 Clear-Host
 
                 If([string]::IsNullOrWhiteSpace($script:csvFilePath)) {
@@ -746,13 +730,14 @@ Try {
                     Else {
                         ConnectToSharePointOnline
                     }
-                    Write-Log "Create Email Views: $script:createEmailViews"
-                    Write-Log "Email View Name:$script:emailViewName"
-                    Write-Log "Email View set as Default: $script:emailViewDefault"
-                    Write-Log "Create View with columns: $script:emailViewColumns"
-                    Write-Log "Create Email Columns: $script:createEmailColumns"
-                    Write-Log "Email Columns to create/find under Group: $script:columnGroupName"
+                    Write-Log "Create Email Views: $script:createEmailViews" -NoOutput
+                    Write-Log "Email View Name:$script:emailViewName" -NoOutput
+                    Write-Log "Email View set as Default: $script:emailViewDefault" -NoOutput
+                    Write-Log "Create View with columns: $script:emailViewColumns" -NoOutput
+                    Write-Log "Create Email Columns: $script:createEmailColumns" -NoOutput
+                    Write-Log "Email Columns to create/find under Group: $script:columnGroupName" -NoOutput
 
+                    Write-Log "Beginning Deployment" -NoOutput
                     Deploy
                 }
             }
@@ -777,10 +762,10 @@ Try {
     }
 }
 Catch {
-    Write-Log -Level Error -Message "Caught an exception at the bottom level. `nException Type: $($_.Exception.GetType().FullName) `nException Message: $($_.Exception.Message)"
+    Write-Log -Level Error -Message "Further exception detail. `n`nException Type: $($_.Exception.GetType().FullName) `n`nException Message: $($_.Exception.Message)"
     Write-Host "`n!!! Please send the log file at '$script:logPath' to 'support@oneplacesolutions.com' for assistance !!!" -ForegroundColor Yellow
     Write-Host "`n!!! Please send the log file at '$script:logPath' to 'support@oneplacesolutions.com' for assistance !!!" -ForegroundColor Red
-    Write-Host "`n!!! Please send the log file at '$script:logPath' to 'support@oneplacesolutions.com' for assistance !!!" -ForegroundColor Cyan
+    Write-Host "`n!!! Please send the log file at '$script:logPath' to 'support@oneplacesolutions.com' for assistance !!!`n" -ForegroundColor Cyan
     Pause
 }
 Finally {
