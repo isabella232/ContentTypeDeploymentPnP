@@ -156,73 +156,113 @@ Try {
 
             $this.contentTypes = @()
 
+            #URL parsing and checking
+            If($url -match "(https://.+/)((sites/)|(teams/))([^/]+)/?$") {
+                Write-Log "Valid Site Collection"
+                $this.isSubSite = $false
+                $this.url = $url
+                $this.web = $url
+            }
+            ElseIf($url -match "(https://.+/)((sites/)|(teams/))([^/]+)(.+)$") {
+                Write-Log "Valid Sub-Site / Sub-Web of Site Collection"
+                $this.isSubSite = $true
+                $this.url = $Matches[1] + $Matches[2] + $Matches[5]
+                $this.web = $Matches[2] + $Matches[5] + $Matches[6]
+            }
+            ElseIf(($url -match "(https://.+/)([^/]+)$") -and ($url -notlike "*sites*") -and ($url -notlike "*team*")) {
+                #This is a Sub Site / Sub Web of the Root Site Collection. Not recommended but will allow it
+                $this.isSubSite = $true
+                $this.url = $Matches[1]
+                $this.web = $Matches[2]
+            }
+            ElseIf($url -match "(https://.+)(\.com)(/)?$") {
+                #This is likely the Root Site Collection, not recommended but will allow it
+                $this.isSubSite = $false
+                $this.url = $url
+                $this.web = $url
+            }
+            Else {
+                Write-Log -Level Error -Message "Site Collection URL could not be parsed. Please check this entry in your CSV"
+                $this.url = ""
+            }
+
+            <#
+            $url = 'https://tenant.sharepoint.com/sites/sc/sw'
             $urlArray = $url.Split('/')
             $rootUrl = $urlArray[0] + '//' + $urlArray[2] + '/'
 
             If ($urlArray[3] -eq "") {
                 #This is the root site collection
-                $this.isSubSite = $false
+                $isSubSite = $false
             }
             ElseIf (($urlArray[3] -ne "sites") -and ($urlArray[3] -ne "teams")) {
                 #This is a subsite in the root site collection
                 For ($i = 3; $i -lt $urlArray.Length; $i++) {
                     If ($urlArray[$i] -ne "") {
-                        $this.web += '/' + $urlArray[$i]
+                        $web += '/' + $urlArray[$i]
                     }
                 }
-                $this.isSubSite = $true
+                $isSubSite = $true
             }
             Else {
                 #This is a site collection with a possible subweb
                 $rootUrl += $urlArray[3] + '/' + $urlArray[4] + '/'
                 For ($i = 3; $i -lt $urlArray.Length; $i++) {
                     If ($urlArray[$i] -ne "") {
-                        $this.web += '/' + $urlArray[$i]
+                        $web += '/' + $urlArray[$i]
                     }
                 }
                 If ($urlArray[5].Count -ne 0) {
-                    $this.isSubSite = $true
+                    $isSubSite = $true
                 }
                 Else {
-                    $this.isSubSite = $false
+                    $isSubSite = $false
                 }
             }
-            Write-Log "Is this a subsite? $($this.isSubSite)"
-            $this.url = $rootUrl
+            #>
+            Write-Log "What is the Web we are in? $($this.web)"
+            Write-Log "What is the Root Site Collection for this Site / Web? $($this.url)"
+            Write-Log "Is this Site a Sub-Site? $($this.isSubSite)"
         }
 
         [boolean]connect() {
-            Try {
-                #Connect to site collection
-                Connect-PnPOnline -Url $this.url -PnPManagementShell
-                #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
-                Start-Sleep -Seconds 3
+            If(-not ([string]::IsNullOrWhiteSpace($this.url))) {
                 Try {
-                    Write-Log "Testing connection with 'Get-PnPWeb'..."
-                    $currentWeb = Get-PnPWeb -ErrorAction Stop
-                    Write-Log "Connected to $($currentWeb.Title)"
+                    #Connect to site collection
+                    Connect-PnPOnline -Url $this.url -PnPManagementShell
+                    #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
+                    Start-Sleep -Seconds 3
+                    Try {
+                        Write-Log "Testing connection with 'Get-PnPWeb'..."
+                        $currentWeb = Get-PnPWeb -ErrorAction Stop
+                        Write-Log "Connected to $($currentWeb.Title)"
+                    }
+                    Catch {
+                        Write-Log -Level Warn -Message "Error testing connection with 'Get-PnPWeb'. Logging but continuing"
+                    }
+                    Return $true
+                }
+                Catch [System.Net.WebException] {
+                    If ($($_.Exception.Message) -like "*(401)*") {
+                        Write-Log -Level Warn "Cannot authenticate with SharePoint Site at $($this.url). Please check if an authentication prompt appeared on your machine prior to the last interaction with this script."
+                    }
+                    ElseIf ($($_.Exception.Message) -like "*(403)*") {
+                        Write-Log -Level Warn "Cannot login to SharePoint Site at $($this.url), Access Denied. Please check the permissions of the credentials/account you are using to authenticate with, and that the Site Collection is not still being provisioned by Microsoft 365."
+                    }
+                    Return $false
                 }
                 Catch {
-                    Write-Log -Level Warn -Message "Error testing connection with 'Get-PnPWeb'. Logging but continuing"
+                    Write-Log -Level Error -Message "Unhandled exception encountered: $($_.Exception.Message)"
+                    Return $false
                 }
-                Return $true
             }
-            Catch [System.Net.WebException] {
-                If ($($_.Exception.Message) -like "*(401)*") {
-                    Write-Log -Level Warn "Cannot authenticate with SharePoint Site at $($this.url). Please check if an authentication prompt appeared on your machine prior to the last interaction with this script."
-                }
-                ElseIf ($($_.Exception.Message) -like "*(403)*") {
-                    Write-Log -Level Warn "Cannot login to SharePoint Site at $($this.url), Access Denied. Please check the permissions of the credentials/account you are using to authenticate with, and that the Site Collection is not still being provisioned by Microsoft 365."
-                }
-                Return $false
-            }
-            Catch {
-                Write-Log -Level Error -Message "Unhandled exception encountered: $($_.Exception.Message)"
+            Else {
+                Write-Log -Level Warn -Message "No valid URL for Site Collection $($this.name), skipping."
                 Return $false
             }
         }
 
-        [void]addContentTypeToDocumentLibraryObj([string]$contentTypeName,[string]$docLibName,[string]$viewName,[boolean]$viewDefault) {
+        [void]addContentTypeToDocumentLibrary([string]$contentTypeName,[string]$docLibName,[string]$viewName,[boolean]$viewDefault) {
             #Check we aren't working without a Document Library name, otherwise assume that we just want to add a Site Content Type
             If (-not [string]::IsNullOrWhiteSpace($docLibName)) {
                 If ($this.documentLibraries.ContainsKey($docLibName)) {
@@ -234,8 +274,7 @@ Try {
                     $this.documentLibraries.Add($docLibName, $tempDocLib)
                     Write-Log "Document Library '$docLibName' not listed for this Site Collection, added."
                 }
-                
-                $this.documentLibraries.$docLibName.addContentTypeToObj($contentTypeName)
+                $this.documentLibraries.$docLibName.addContentType($contentTypeName)
             }
             
             #If the named Content Type is not already listed in Site Content Types, add it to the Site Content Types
@@ -253,10 +292,10 @@ Try {
             }
         }
 
-        [void]addContentTypesToDocumentLibariesSPO() {
+        [void]processDocLibs() {
             Write-Log "Adding the Content Types to the Document Libraries in SPO..."
             ForEach($lib in $this.documentLibraries.Values) {
-                $lib.addContentTypeInSPO()
+                $lib.processDocLib()
             }
         }
 
@@ -411,7 +450,7 @@ Try {
             $this.name = $name
             $this.contentTypes = @()
             $this.web = $web
-            If((-not ([string]::IsNullOrWhiteSpace($viewName))) -and ("" -ne $viewName)) {
+            If(-not ([string]::IsNullOrWhiteSpace($viewName))) {
                 $this.createView = $true
                 $this.viewName = $viewName
                 $this.viewDefault = $viewDefault
@@ -422,7 +461,6 @@ Try {
                 $this.viewName = ""
                 $this.viewDefault = ""
             }
-            
         }
 
         docLib([String]$name,[string]$web) {
@@ -435,7 +473,7 @@ Try {
             $this.viewDefault = ""
         }
 
-        [void]addContentTypeToObj([string]$contentTypeName) {
+        [void]addContentType([string]$contentTypeName) {
             If (-not $this.contentTypes.Contains($contentTypeName)) {
                 Write-Log "`tAdding Content Type '$contentTypeName' to '$($this.name)' Document Library Content Types"
                 $this.contentTypes += $contentTypeName
@@ -445,7 +483,7 @@ Try {
             }
         }
 
-        [void]addContentTypeInSPO() {
+        [void]processDocLib() {
             Write-Log "`nWorking with Document Library: $($this.name)"
             Write-Host "Which has Content Types:" -ForegroundColor Yellow
             $this.contentTypes | Format-Table
@@ -541,7 +579,7 @@ Try {
         Try {
             $csv = Import-Csv -Path $csvFile -ErrorAction Continue
 
-            Write-Host "Enumerating Site Collections and Document Libraries from CSV file." -ForegroundColor Yellow
+            Write-Host "Enumerating information from CSV file...`n" -ForegroundColor Yellow
             ForEach ($element in $csv) {
                 [string]$csv_siteName = $element.SiteName
                 [string]$csv_siteUrl = $element.SiteUrl -replace '\s', '' #remove any whitespace from URL
@@ -567,7 +605,7 @@ Try {
                 If([string]::IsNullOrWhiteSpace($script:extractedTenant)) {
                     $script:extractedTenant = $csv_siteUrl  -match 'https://(?<Tenant>.+)\.sharepoint.com'
                     $script:extractedTenant = $Matches.Tenant
-                    Write-Log "Extracted Tenant name '$script:extractedTenant'"
+                    Write-Log "Extracted Tenant name '$script:extractedTenant'`n"
                 }
 
                 #Don't create siteCol objects that do not have a URL, this also accounts for empty lines at EOF
@@ -579,11 +617,11 @@ Try {
 
                     If ($script:siteColsHT.ContainsKey($csv_siteUrl)) {
                         #Site Collection already listed, just add the Content Type and the Document Library if required
-                        $script:siteColsHT.$csv_siteUrl.addContentTypeToDocumentLibraryObj($csv_contentType,$csv_docLib,$csv_viewName,$csv_viewDefault)
+                        $script:siteColsHT.$csv_siteUrl.addContentTypeToDocumentLibrary($csv_contentType,$csv_docLib,$csv_viewName,$csv_viewDefault)
                     }
                     Else {
                         $newSiteCollection = [siteCol]::new($csv_siteName, $csv_siteUrl,$csv_createColumns)
-                        $newSiteCollection.addContentTypeToDocumentLibraryObj($csv_contentType,$csv_docLib,$csv_viewName,$csv_viewDefault)
+                        $newSiteCollection.addContentTypeToDocumentLibrary($csv_contentType,$csv_docLib,$csv_viewName,$csv_viewDefault)
                         $script:siteColsHT.Add($csv_siteUrl, $newSiteCollection)
                     }
                 }
