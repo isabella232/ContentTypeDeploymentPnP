@@ -684,7 +684,7 @@ Try {
             Write-Host "These Columns will be added to the Site Content Types listed in your CSV file."
             
             #Get the Content Type Object for 'Document' from SP, we will use this as the parent Content Type for our email Content Type
-            $DocCT = Get-PnPContentType -Identity "Document"
+            $DocCT = Get-PnPContentType -Identity 0x0101
             If ($null -eq $DocCT) {
                 $filler = "Couldn't get 'Document' Site Content Type in $siteName. Skipping Site Collection: $siteName"
                 Write-Log -Level Warn -Message $filler
