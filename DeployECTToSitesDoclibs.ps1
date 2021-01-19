@@ -402,10 +402,10 @@ Try {
         }
 
         Catch [System.Net.WebException] {
-            If ($($_.Exception.Message) -like "*(401) Unauthorized*") {
+            If ($($_.Exception.Message) -like "*(401)*") {
                 Write-Log -Level Warn "Cannot authenticate with SharePoint Admin Site. Please check if an authentication prompt appeared on your machine prior to the last interaction with this script."
             }
-            ElseIf ($($_.Exception.Message) -like "*(403) Forbidden*") {
+            ElseIf ($($_.Exception.Message) -like "*(403)*") {
                 Write-Log -Level Warn "Cannot login to SharePoint Admin Site, Access Denied. Please check the permissions of the credentials/account you are using to authenticate with."
             }
             Throw
