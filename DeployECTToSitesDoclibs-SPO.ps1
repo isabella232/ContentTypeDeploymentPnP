@@ -326,11 +326,11 @@ Try {
                 Write-Log "Columns found for group '$script:columnGroupName':"
                 $script:emailColumns | Format-Table
                 Write-Host "These Columns will be added to the Site Content Types extracted from your CSV file:"
-                Write-Log "$($this.contentTypes.ToString())"
+                Write-Log "$([string]$this.contentTypes)"
                 $this.contentTypes | Format-Table
             
                 #Get the Content Type Object for 'Document' from SP, we will use this as the parent Content Type for our email Content Type
-                $DocCT = Get-PnPContentType -Identity "Document"
+                $DocCT = Get-PnPContentType -Identity 0x0101
                 If ($null -eq $DocCT) {
                     Write-Log -Level Warn -Message "Couldn't get 'Document' Parent Site Content Type in $($this.name). Skipping this Site Collection."
                 }
@@ -423,22 +423,28 @@ Try {
             $this.contentTypes | Format-Table
 
             Write-Host "`nEnabling Content Type Management in Document Library '$($this.name)'." -ForegroundColor Yellow
-            Set-PnPList -Identity $($this.name) -EnableContentTypes $true -Web $this.web
-
-            #For each Site Content Type listed for this docLib/Document Library, try to add it to said Document Library
-            $this.contentTypes | ForEach-Object {
-                Try{
-                    Write-Log "Adding Site Content Type '$($_)' to Document Library '$($this.name)'..."
-                    Add-PnPContentTypeToList -List $($this.name) -ContentType $($_) -Web $this.web
+            Try {
+                Set-PnPList -Identity $($this.name) -EnableContentTypes $true -Web $this.web
+                #For each Site Content Type listed for this docLib/Document Library, try to add it to said Document Library
+                $this.contentTypes | ForEach-Object {
+                    Try{
+                        Write-Log "Adding Site Content Type '$($_)' to Document Library '$($this.name)'..."
+                        Add-PnPContentTypeToList -List $($this.name) -ContentType $($_) -Web $this.web
+                    }
+                    Catch {
+                        Write-Log -Level Error -Message "Error adding Site Content Type '$($_)' to Document Library '$($this.name)': $($_.Exception.Message)"
+                    }
                 }
-                Catch {
-                    Write-Log -Level Error -Message "Error adding Site Content Type '$($_)' to Document Library '$($this.name)': $($_.Exception.Message)"
+
+                If($script:createEmailViews) {
+                    $this.createEmailView($script:emailViewName)
                 }
             }
-
-            If($script:createEmailViews) {
-                $this.createEmailView($script:emailViewName)
+            Catch {
+                Write-Log -Level Error -Message "Error enabling Content Type management in Document Library '$($this.name): $($_.Exception.Message). Skipping this Document Library"
             }
+
+
         }
 
         [void]createEmailView([string]$viewName) {
