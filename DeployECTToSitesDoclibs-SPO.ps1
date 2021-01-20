@@ -326,7 +326,7 @@ Try {
                 Write-Log "Columns found for group '$script:columnGroupName':"
                 $script:emailColumns | Format-Table
                 Write-Host "These Columns will be added to the Site Content Types extracted from your CSV file:"
-                Write-Log "$($this.contentTypes)"
+                Write-Log "$($this.contentTypes.ToString())"
                 $this.contentTypes | Format-Table
             
                 #Get the Content Type Object for 'Document' from SP, we will use this as the parent Content Type for our email Content Type
