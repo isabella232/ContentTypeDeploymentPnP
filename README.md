@@ -97,7 +97,7 @@ When you have finished customizing the file, please save and close it to ensure 
 
 4. Modify your options as required
 	
-	![SPO_MainMenu](./SPO_MainMenu.png)
+	![SPO_MainMenu](./README-Images/SPO_MainMenu.png)
 	
 	1. Select CSV file. Path:
 		Select this option to specify the CSV file you are using to deploy
