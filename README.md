@@ -33,7 +33,7 @@ When you have finished customizing the file, please save and close it to ensure 
 ### Pre-Requisites
 
 1.  Administrator rights to your SharePoint Admin Site (for SharePoint Online) and the Site Collections you wish to deploy to.
-2.  (SharePoint On-Premise Only) [The SharePoint PnP PowerShell cmdlets](https://github.com/pnp/PnP-PowerShell). 
+2.  **(SharePoint On-Premise Only)** [The SharePoint PnP PowerShell cmdlets](https://github.com/pnp/PnP-PowerShell). 
     You will need to install **only the the cmdlets that target your version of SharePoint** on the machine you are running the script from. If you have installed the cmdlets previously using an MSI file these need to be uninstalled from Control Panel, but if you have installed the cmdlets previously using PowerShell Get you can update them with this command:
     ```
     Update-Module SharePointPnPPowerShell<version>
@@ -45,7 +45,7 @@ When you have finished customizing the file, please save and close it to ensure 
     ```
     > ![](./README-Images/installPnPClassic.png)
 	
-3.  (SharePoint Online Only) (Multi-Tenant supported) [The latest PnP.PowerShell](https://pnp.github.io/powershell/articles/installation.html) installed on the machine you are running the script from. You can run the below command in PowerShell (as Administrator) to install it. 
+3.  **(SharePoint Online Only)** (Multi-Tenant supported) [The latest PnP.PowerShell](https://pnp.github.io/powershell/articles/installation.html) installed on the machine you are running the script from. You can run the below command in PowerShell (as Administrator) to install it. 
 
     Install new PnP.PowerShell Cmdlets:
     ```
