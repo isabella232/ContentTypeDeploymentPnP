@@ -123,7 +123,11 @@ When you have finished customizing the file, please save and close it to ensure 
     L\: Change Log file path (Currently: 'C:\Users\<username>\Documents\OPSScriptLog.txt')
     > You can opt to log the script actions to a different path. Default value is in the current User's profile under 'Documents\OPSScriptLog.txt'.
     
-5.  The script will automatically parse your Microsoft 365 Tenant name from the CSV file, please confirm this is correct and continue.
+5.  The script will automatically parse your Microsoft 365 Tenant name from the CSV file, please confirm this is correct and continue.]
+    ![SPO_ConfirmTenant](./README-Images/SPO_ConfirmTenant.png)
+
+6.  You will be asked to authenticate to your SharePoint Admin Site through the PnP Management Shell. Please follow the directions from the script to copy the code into the browser, and if required consent to the PnP Management Shell.
+    ![SPO_PnPManagementShellLogin](./README-Images/SPO_PnPManagementShellLogin.png)
 
 ## SharePoint On-Premise
 
