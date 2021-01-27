@@ -113,6 +113,7 @@ When you have finished customizing the file, please save and close it to ensure 
 		If you have changed 4. to 'True', select this option to enable/disable setting that view as Default in the locations it is created. Default value is 'False'
 	7: Deploy
 		Once you have changed the other options as required, select this option to begin executing the script.
+5.  The script will automatically parse your Microsoft 365 Tenant name from the CSV file, please confirm this is correct and continue.
 
 ## SharePoint On-Premise
 
