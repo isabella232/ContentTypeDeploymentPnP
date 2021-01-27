@@ -99,19 +99,19 @@ When you have finished customizing the file, please save and close it to ensure 
 	
 	![SPO_MainMenu](./README-Images/SPO_MainMenu.png)
 	
-	1. Select CSV file. Path:
+    1. Select CSV file. Path:
 		Select this option to specify the CSV file you are using to deploy
-	2. Enable Email Column Creation: True
+    2. Enable Email Column Creation: True
 		Select this option to disable/enable automatic Email Column creation. Default value is 'True'.
-	3: Email Column Group: OnePlace Solutions
+    3: Email Column Group: OnePlace Solutions
 		This is the name of the Column Group we expect to find the Email Columns when creating Content Types. If you have left 2 as 'True' this can be left as is.
-	4: Enable Email View Creation: False
+    4: Enable Email View Creation: False
 		Select this option to enable/disable automatic Email View creation in the Document Libraries you specified in the CSV file. Default value is 'False'.
-	5: Email View Name: Emails
+    5: Email View Name: Emails
 		This is the name of the View the script will create if you changed 4. to 'True'.
-	6: Set View 'Emails' as default: False
+    6: Set View 'Emails' as default: False
 		If you have changed 4. to 'True', select this option to enable/disable setting that view as Default in the locations it is created. Default value is 'False'
-	7: Deploy
+    7: Deploy
 		Once you have changed the other options as required, select this option to begin executing the script.
 5.  The script will automatically parse your Microsoft 365 Tenant name from the CSV file, please confirm this is correct and continue.
 
