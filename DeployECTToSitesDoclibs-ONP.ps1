@@ -10,8 +10,6 @@ $ErrorActionPreference = 'Stop'
 $script:logFile = "OPSScriptLog.txt"
 $script:logPath = "$env:userprofile\Documents\$script:logFile"
 
-$script:extractedTenant = ""
-
 function Write-Log { 
     <#
         .NOTES 
@@ -103,58 +101,20 @@ Try {
 
     #Check for module versions of PnP / SPOMS
     Try {
-        Write-Host "Checking if PnP / SPOMS installed via Module..." -ForegroundColor Cyan
-        $pnpModule = Get-InstalledModule SharePointPnPPowerShell* | Select-Object Name, Version
-        $spomsModule = Get-InstalledModule Microsoft.Online.SharePoint.PowerShell | Select-Object Name, Version
+        Write-Host "Checking if PnP installed via Module..." -ForegroundColor Cyan
+        $pnpModule = Get-InstalledModule "*PnP*" | Select-Object Name, Version
     }
     Catch {
         #Couldn't check PNP or SPOMS Module versions, Package Manager may be absent
     }
     Finally {
         Write-Log -Level Info -Message "PnP Module Installed: $pnpModule"
-        Write-Log -Level Info -Message "SPOMS Module Installed: $spomsModule"
     }
 
-    #Check for MSI versions of PnP / SPOMS
-    Try {
-        Write-Host "Checking if PnP / SPOMS installed via MSI..." -ForegroundColor Cyan
-        $pnpMSI = Get-WmiObject Win32_Product | Where-Object {$_.Name -match "PnP PowerShell*"} | Select-Object Name, Version
-        $spomsMSI = Get-WmiObject Win32_Product | Where-Object {$_.Name -match "SharePoint Online Management Shell"} | Select-Object Name, Version
-    }
-    Catch {
-        #Couldn't check PNP or SPOMS MSI versions
-    }
-    Finally {
-        Write-Log -Level Info -Message "PnP MSI Installed: $pnpMSI"
-        Write-Log -Level Info -Message "SPOMS MSI Installed: $spomsMSI"
-    }
-
-    If (($null -ne $pnpModule.Count) -or ((0 -ne $pnpMSI.Count) -and (1 -ne $pnpMSI.Count))) {
-        Write-Log -Level Warn -Message "Multiple versions of PnP may be installed. This is not supported by PnP and will likely cause issues when running this script.`nPlease uninstall the versions not applicable to your SharePoint version and re-run this script."
-        Pause
-    }
-
-    $preReqMissing = $false
-    If (($null -eq $pnpModule) -and ($null -eq $pnpMSI)) {
-        Write-Log -Level Warn -Message "No SharePoint PnP Cmdlets installation detected! This is required."
-        $preReqMissing = $true
-    }
-    If (($null -eq $spomsModule) -and ($null -eq $spomsMSI)) {
-        Write-Log -Level Warn -Message "No SharePoint Online Management Shell installation detected! This is required."
-        $preReqMissing = $true
-    }
-    If ($preReqMissing) {
-        Write-Host "`nPlease ensure you have checked and installed the pre-requisites listed in the GitHub documentation prior to running this script."
-        Write-Host "!!! If pre-requisites for the Content Type Deployment have not been completed this script/process may fail !!!" -ForegroundColor Yellow
-        Pause
-    }
     Start-Sleep -Seconds 2
 
     #Contains all our Site Collections as siteCol objects
     $script:siteColsHT = @{ }
-
-    #Flag for whether we are working in SharePoint Online or on-premises.
-    [boolean]$script:isSPOnline = $true
 
     #Flag for whether we create default email views or not, and if so what name to use
     [boolean]$script:createDefaultViews = $false
@@ -169,12 +129,6 @@ Try {
 
     #Credentials object to hold On-Premises credentials, so we can iterate across site collections with it
     $script:onPremisesCred
-
-    #Tells us if we are using token auth
-    [boolean]$script:usingTokenAuth = $false
-
-    #Holds our OAuth 2.0 token if using SharePoint Online
-    $script:token = $null
 
     #Contains all the data we need relating to the Site Collection we are working with, including the Document Libraries and the Site Content Type names
     class siteCol {
@@ -324,12 +278,6 @@ Try {
                 $csv_docLib = $element.DocLib
                 $csv_contentType = $element.CTName
 
-                If("" -eq $script:extractedTenant) {
-                    $script:extractedTenant = $csv_siteUrl  -match 'https://(?<Tenant>.+)\.sharepoint.com'
-                    $script:extractedTenant = $Matches.Tenant
-                    Write-Log -Level Info -Message "Extracted Tenant name '$script:extractedTenant'"
-                }
-
                 #Don't create siteCol objects that do not have a URL, this also accounts for empty lines at EOF
                 If ($csv_siteUrl -ne "") {
                     #If a name is not defined, use the URL
@@ -353,101 +301,6 @@ Try {
             Write-Host "Error parsing CSV file. Is this filepath for a a valid CSV file?" -ForegroundColor Red
             $csvFile
             Throw
-        }
-    }
-
-    #Facilitates connection to the SharePoint Online site collections through the SharePoint Online Management Shell
-    #This automatically takes place on 'Connect-PnPOnline -SPOManagementShell' calls, but we can explicitly connect first here
-    function ConnectToSharePointOnlineAdmin([string]$tenant) {
-        #Prompt for SharePoint Management Site Url     
-        Try {
-            If ($tenant -eq "") {
-                $tenant = Read-Host -Prompt "Please enter the name of your SharePoint Online tenant, eg for 'https://contoso.sharepoint.com' just enter 'contoso'."
-                $tenant = $tenant.Trim()
-                If (($tenant.Contains("sharepoint")) -and (-not $tenant.Contains('-admin'))) {
-                    $tenant = $tenant.trim("https://")
-                    $charArray = $tenant.Split(".")
-                    $tenant = ($charArray[$charArray.IndexOf('sharepoint') - 1])
-                    $adminSharePointUrl = "https://$tenant-admin.sharepoint.com"
-                }
-                ElseIf ($tenant.Contains('-admin.sharepoint.com')) {
-                    $adminSharePointUrl = $tenant
-                }
-                Else {
-                    $adminSharePointUrl = "https://$tenant-admin.sharepoint.com"
-                }
-            }
-            Else {
-                $adminSharePointUrl = "https://$tenant-admin.sharepoint.com"
-            }
-            #Connect to site collection
-        
-            Write-Host "Enter SharePoint credentials(your email address for SharePoint Online):" -ForegroundColor Green
-            #Connect-SPOService -Url $adminSharePointUrl
-            Connect-PnPOnline -Url $adminSharePointUrl -SPOManagementShell -ClearTokenCache
-            #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
-            Start-Sleep -Seconds 3
-            Pause
-            
-            $filler = "Testing connection with 'Get-PnPWeb'..."
-            Write-Log -Level Info -Message $filler
-            Write-Host $filler
-            Get-PnPWeb
-        }
-        Catch [System.Management.Automation.ParameterBindingException]{
-            If ($($_.Exception.Message) -like "A parameter cannot be found that matches parameter name 'SPOManagementShell'.") {
-                Write-Log -Level Warn "Cannot authenticate using PnP and SharePoint Online Management Shell. Please check which version of SharePoint PnP PowerShell is installed, and that the SharePoint Online Management Shell is installed."
-            }
-            Throw
-        }
-
-        Catch [System.Net.WebException] {
-            If ($($_.Exception.Message) -like "*(401) Unauthorized*") {
-                Write-Log -Level Warn "Cannot authenticate with SharePoint Admin Site. Please check if an authentication prompt appeared on your machine prior to the last interaction with this script."
-            }
-            ElseIf ($($_.Exception.Message) -like "*(403) Forbidden*") {
-                Write-Log -Level Warn "Cannot login to SharePoint Admin Site, Access Denied. Please check the permissions of the credentials/account you are using to authenticate with."
-            }
-            Throw
-        }
-    }
-
-    #Facilitates connection to the SharePoint Online site collections through an OAUTH 2.0 token
-    #BROKEN AS OF 13/11/2020
-    function ConnectToSharePointOnlineOAuth([string]$rootSharePointUrl) {
-        #Prompt for SharePoint Root Site Url
-        If ($rootSharePointUrl -eq "") {
-            $rootSharePointUrl = Read-Host -Prompt "Please enter the URL of your SharePoint Online Root Site Collection, eg 'https://contoso.sharepoint.com'."
-            $rootSharePointUrl = $rootSharePointUrl.Trim()
-
-            If (-not $rootSharePointUrl.Contains('sharepoint')) {
-                $rootSharePointUrl = "https://" + $rootSharePointUrl + ".sharepoint.com"
-            }
-        } 
-
-        Write-Host "Please authenticate against your Office 365 tenant by pasting the code copied to your clipboard and signing in. App access must be granted to the Office 365 PnP Management Shell to continue." -ForegroundColor Green  
-        Try {
-            Connect-PnPOnline -url $rootSharePointUrl -PnPO365ManagementShell -LaunchBrowser
-        }
-        Catch {
-            $exMessage = $($_.Exception.Message)
-            #These messages can be ignored. If we have an empty token we will throw an exception further down
-            If (($exMessage -notmatch 'The handle is invalid') -and ($exMessage -notmatch 'Object reference not set to an instance of an object')) {
-                Throw
-            }
-        }
-
-        #workaround for PnP handling the token. Login to the root site normally and retrieve the token from there, then we will test it.
-        Write-Host "`nEnter SharePoint credentials(your email address for SharePoint Online):`n" -ForegroundColor Green
-        Connect-PnPOnline -url $rootSharePointUrl -UseWebLogin
-        $script:token = Get-PnPAccessToken
-        Disconnect-PnPOnline
-
-        Write-Host "Testing OAuth token to ensure we don't have an issue later...`n"
-        Connect-PnPOnline -url $rootSharePointUrl -AccessToken $script:token
-        $web = Get-PnPWeb
-        If ($null -ne $web) {
-            Write-Host "Success!`n" -ForegroundColor Green
         }
     }
 
@@ -555,8 +408,7 @@ Try {
         Write-Host 'Welcome to the OnePlace Solutions Content Type Deployment Script' -ForegroundColor Green
         Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
         Write-Host 'Please make a selection:' -ForegroundColor Yellow
-        Write-Host "1: SharePoint Online (365)" 
-        Write-Host "2: SharePoint On-Premises (2016/2019)"
+        Write-Host "1: SharePoint On-Premises (2016/2019)"
         Write-Host "Q: Press 'Q' to quit." 
     }
 
@@ -568,8 +420,8 @@ Try {
             Write-Host "N: No" 
             Write-Host "Y: Yes"
             Write-Host "Q: Press 'Q' to quit."  
-            $input = Read-Host "Please select an option" 
-            switch ($input) { 
+            $customInput = Read-Host "Please select an option" 
+            switch ($customInput) { 
                 'N' {
                     $script:createDefaultViews = $false
                 }
@@ -583,7 +435,7 @@ Try {
                 'q' { Exit }
             }
         } 
-        until(($input -eq 'q') -or ($script:createDefaultViews -ne $null))
+        until(($customInput -eq 'q') -or ($script:createDefaultViews -ne $null))
 
         Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
     }
@@ -595,10 +447,10 @@ Try {
             Write-Host "N: No" 
             Write-Host "Y: Yes"
             Write-Host "Q: Press 'Q' to quit."  
-            $input = Read-Host "Please select an option" 
-            $input = $input[0]
+            $customInput = Read-Host "Please select an option" 
+            $customInput = $customInput[0]
 
-            switch ($input) { 
+            switch ($customInput) { 
                 'N' {
                     $script:createEmailColumns = $false
                     #Get the Group name containing the OnePlaceMail Email Columns for use later per site, default is 'OnePlaceMail Solutions'
@@ -616,7 +468,7 @@ Try {
                 'q' { Exit }
             }
         } 
-        until(($input -eq 'q') -or ($null -ne $script:createEmailColumns))
+        until(($customInput -eq 'q') -or ($null -ne $script:createEmailColumns))
 
         Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
     }
@@ -640,19 +492,9 @@ Try {
             #Authenticate against the Site Collection we are currently working with
 
             Try {
-                If ($script:isSPOnline -and (-not $script:usingTokenAuth)) {
-                    Write-Log -Level Info -Message "Connecting using SPOMS Auth"
-                    Connect-pnpOnline -url $site.url -SPOManagementShell
-                    Start-Sleep -Seconds 2
-                }
-                ElseIf ($script:isSPOnline -and $script:usingTokenAuth) {
-                    Write-Log -Level Info -Message "Connecting using Token Auth"
-                    Connect-PnPOnline -url $site.url -AccessToken $script:token
-                }
-                Else {
-                    Write-Log -Level Info -Message "Connecting using On Prem Auth"
-                    Connect-pnpOnline -url $site.url -Credentials $script:onPremisesCred
-                }
+                Write-Log -Level Info -Message "Connecting using On Prem Auth"
+                Connect-pnpOnline -url $site.url -Credentials $script:onPremisesCred
+                
                 #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
                 Start-Sleep -seconds 3
                 Get-PnPWeb -ErrorAction Continue
@@ -780,20 +622,7 @@ Try {
 
                 CreateEmailView -library $libName -web $site.web
             }
-            Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
-
-            Try {
-                If ($script:usingTokenAuth) {
-                    #refresh our token if we are using one
-                    $script:token = Get-PnPAccessToken
-                    Write-Log -Level Info -Message "Refreshing Access Token"
-                }
-            }
-            Catch {
-                Write-Log -level Warn -Message "Failed to refresh PnP Auth Token, will attempt to continue:`n"
-                Write-Log -level Info -Message $_
-            }
-        
+            Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red      
         }   
         Write-Host "Deployment complete! Please check your SharePoint Environment to verify completion. If you would like to copy the output above, do so now before pressing 'Enter'." 
         Write-Log -Level Info -Message "Deployment complete." 
@@ -804,70 +633,14 @@ Try {
 
     do {
         showEnvMenu 
-        $input = Read-Host "Please select an option" 
-        switch ($input) { 
+        $customInput = Read-Host "Please select an option" 
+        switch ($customInput) { 
             '1' {
-                #Online
-                Write-Log -Level Info -Message "User has selected Option 1 for SPO."
-                Clear-Host
-
-                If((($pnpModule -notlike "*Online*") -or ($null -eq $pnpModule)) -and (($pnpMSI -notlike "*Online*") -or ($null -eq $pnpMSI))){
-                    Write-Log -Level Warn -Message "SharePoint Online selected for deployment, but SharePoint Online PnP CmdLets not installed. Please check installed version before continuing."
-                    Pause
-                }
-
-                #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
-                EnumerateSitesDocLibs
-                #Connect to SharePoint Online, using SharePoint Management Shell against the Admin site
-                If("" -ne $script:extractedTenant) {
-                    Write-Host "`nExtracted Tenant Name '$script:extractedTenant' from CSV, is this correct?"
-                    Write-Host "N: No" 
-                    Write-Host "Y: Yes"
-                    $otherInput = Read-Host "Please select an option" 
-                    If($otherInput[0] -eq 'Y') {
-                        Write-Log -Level Info -Message "User has confirmed extracted Tenant name."
-                        ConnectToSharePointOnlineAdmin -Tenant $script:extractedTenant
-                    }
-                    Else {
-                        ConnectToSharePointOnlineAdmin
-                    }
-                }
-                Else {
-                    ConnectToSharePointOnlineAdmin
-                }
-                
-                Deploy
-            }
-            's' {
-                #Online
-                Write-Log -Level Info -Message "User has selected Option S for skipping Admin Site pre-auth."
-                Clear-Host
-                #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
-                EnumerateSitesDocLibs
-                #Skip connecting to the Admin Site, we will automatically connect using SPO management shell when required.
-                #This will possibly not prompt for credentials
-                Deploy
-            }
-            <#
-            BROKEN AS OF 13/11/2020
-            't' {
-                #Online
-                Write-Log -Level Info -Message "User has selected Option T for token auth."
-                Clear-Host
-                #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
-                EnumerateSitesDocLibs
-                #Connect to SharePoint Online, using token based login to iterate over the site collections
-                $script:usingTokenAuth = $true
-                ConnectToSharePointOnlineOAuth
-                Deploy
-            }
-            #>
-            '2' {
                 #On-Premises
-                Write-Log -Level Info -Message "User has selected Option 2 for SP On Prem."
+                Write-Log -Level Info -Message "User has selected Option 1 for SP On Prem."
                 Clear-Host
 
-                If(($pnpModule -like "*Online*") -or ($pnpMSI -like "*Online*")){
+                If(($pnpModule -like "*Online") -or ($pnpModule -like "PnP.PowerShell")){
                     Write-Log -Level Warn -Message "SharePoint On-Premises selected for deployment, but SharePoint Online PnP CmdLets installed. Please check installed version before continuing."
                     Pause
                 }
@@ -887,11 +660,6 @@ Try {
                     Write-Host "Cleared PnP Connection!"
                 }
                 Catch{}
-                Try {
-                    Disconnect-SPOService
-                    Write-Host "Cleared SPO Management Shell Connection!"
-                }
-                Catch{}
                 Start-Sleep -Seconds 3
                 showEnvMenu
             }
@@ -899,7 +667,7 @@ Try {
         } 
         pause 
     } 
-    until($input -eq 'q') {
+    until($customInput -eq 'q') {
     }
 }
 Catch {
@@ -912,12 +680,6 @@ Catch {
     Pause
 }
 Finally {
-    Try {
-        Disconnect-SPOService
-    }
-    Catch {
-        #Sink everything, this is just trying to tidy up
-    }
     Try {
         Disconnect-PnPOnline
     }
