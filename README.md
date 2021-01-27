@@ -8,9 +8,10 @@ A script and sample CSV file to create the OnePlace Solutions Email Columns, add
     1a. [Pre-Requisites](#pre-requisites)\
     1b. [Assumptions and Considerations](#assumptions-and-considerations)\
     1c. [Restrictions](#restrictions)
-2. [Usage](#usage)
-3. [License](#license)
-4. [Acknowledgments](#acknowledgments)
+2. [SharePoint Online](#sharepoint-online)
+3. [SharePoint On-Premise](#sharepoint-on-premise)
+4. [License](#license)
+5. [Acknowledgments](#acknowledgments)
 
 ## Getting Started
 
@@ -31,17 +32,40 @@ When you have finished customizing the file, please save and close it to ensure 
 
 ### Pre-Requisites
 
-* Administrator rights to your SharePoint Admin Site (for SharePoint Online) and the Site Collections you wish to deploy to.
-* The SharePoint PnP PowerShell cmdlets. 
-You will need to install the the cmdlets on the machine you are running the script from that target your version of SharePoint, latest release that covers all SharePoint versions is [December 2020](https://github.com/pnp/PnP-PowerShell)
-	> ![](./README-Images/installPnP.png)
+1.  Administrator rights to your SharePoint Admin Site (for SharePoint Online) and the Site Collections you wish to deploy to.
+2.  (SharePoint On-Premise Only) [The SharePoint PnP PowerShell cmdlets](https://github.com/pnp/PnP-PowerShell). 
+    You will need to install **only the the cmdlets that target your version of SharePoint** on the machine you are running the script from. If you have installed the cmdlets previously using an MSI file these need to be uninstalled from Control Panel, but if you have installed the cmdlets previously using PowerShell Get you can update them with this command:
+    ```
+    Update-Module SharePointPnPPowerShell<version>
+    ```
+    
+    This is the command pictured to install the PnP Cmdlets via PowerShell Get:
+    ```
+    Install-Module SharePointPnPPowerShell<version>
+    ```
+    > ![](./README-Images/installPnPClassic.png)
 	
-	You will need to run PowerShell as an Administrator on your machine to install the module, and select '\[A\] Yes to All' when prompted.
+3.  (SharePoint Online Only) (Multi-Tenant supported) [The latest PnP.PowerShell](https://pnp.github.io/powershell/articles/installation.html) installed on the machine you are running the script from. You can run the below command in PowerShell (as Administrator) to install it. 
 
-    > ![](./README-Images/powershellAdmin.png)
-	
-* [SharePoint Online Management Shell](https://docs.microsoft.com/en-us/powershell/sharepoint/sharepoint-online/connect-sharepoint-online?view=sharepoint-ps) - Required to Authenticate against your Admin Site and access the listed Site Collections through said authentication. (For SharePoint Online only)
-	> ![](./README-Images/installSPOMS.png)
+    Install new PnP.PowerShell Cmdlets:
+    ```
+    Install-Module -Name "PnP.PowerShell"
+    ```
+    Note that you will need to ensure you have uninstalled any previous 'Classic' PnP Cmdlets prior to installing this. If you have installed the cmdlets previously using an MSI file these need to be uninstalled from Control Panel, but if you have installed the cmdlets previously using PowerShell Get you can uninstall them with this command (as Administrator):
+
+    ```
+    Uninstall-Module 'SharePointPnPPowerShellOnline'
+    ```
+    
+    This script will also require your Microsoft 365 Administrator to grant App access to the PnP Management Shell in your 365 Tenant. It is recommended that you check and grant this ahead of running the script by entering this command in PowerShell and following the directions. Documentation and more information [here](https://pnp.github.io/powershell/articles/authentication.html).
+    ```
+    Register-PnPManagementShellAccess
+    ```
+    > ![](./README-Images/pnpmanagementshellperms.png)
+    
+    * We recommend only granting this App access for your account, and if you no longer require this access after running the script you can delete it from your Microsoft 365 Tenant which will revoke it's permissions. [Microsoft Documentation on Deleting Enterprise Applications](https://docs.microsoft.com/en-us/azure/active-directory/manage-apps/delete-application-portal).
+    * The PnP Management Shell is created by the PnP project to facilitate authentication and access control to your 365 Tenant, and is not published by OnePlace Solutions. Granting permissions for the PnP Management shell to a user/users only allows **delegated access**, the user must still authenticate and have the adequate permissions to perform any actions through the PnP Management Shell. In previous versions of the PnP Cmdlets these permissions did not need to be requested, but with the move to Modern Authentication these permissions are now explicitly requested.
+    * This script only utilizes the 'Have full control of all Site Collections' permission pictured above, and this is restricted by the delegated permissions of the user that is authenticating.
 
 ### Assumptions and Considerations
 
@@ -55,7 +79,9 @@ You will need to install the the cmdlets on the machine you are running the scri
 * Only works for SharePoint Online or 2016/2019 environments. SharePoint 2013 is not supported with this script.
 * Only works with Site Content Types (for both creation and adding Email Columns to existing) inheriting from the 'Document' Site Content Type. These Site Content Types can however still be added to locations within subsites/subwebs.
 
-## Usage
+## SharePoint Online
+
+## SharePoint On-Premise
 
 1. Download the CSV file and modify it to suit your deployment requirements. 
 
@@ -67,7 +93,7 @@ You will need to install the the cmdlets on the machine you are running the scri
 3. Run the below command to invoke the current(master) version of the script:
 
    ```
-   Invoke-Expression (New-Object Net.WebClient).DownloadString(‘https://raw.githubusercontent.com/OnePlaceSolutions/ContentTypeDeploymentPnP/master/DeployECTToSitesDoclibs.ps1’)
+   Invoke-Expression (New-Object Net.WebClient).DownloadString(‘https://raw.githubusercontent.com/OnePlaceSolutions/ContentTypeDeploymentPnP/master/DeployECTToSitesDoclibs-ONP.ps1’)
    ```
    ![InvokeExpression](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/blob/master/README-Images/InvokeExpression.png)
 
