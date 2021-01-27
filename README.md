@@ -100,7 +100,7 @@ When you have finished customizing the file, please save and close it to ensure 
     ![SPO_MainMenu](./README-Images/SPO_MainMenu.png)
     
     1\. Select CSV file. Path:
-    > Select this option to specify the CSV file you are using to deploy.
+    > Select this option to specify the CSV file you are using to deploy. Once selected, you will also see an output of how the script parsed your CSV file.
     
     2\. Enable Email Column Creation: True
     > Select this option to disable/enable automatic Email Column creation. Default value is 'True'.
@@ -119,6 +119,9 @@ When you have finished customizing the file, please save and close it to ensure 
     
     7\: Deploy
     > Once you have changed the other options as required, select this option to begin executing the script.
+    
+    L\: Change Log file path (Currently: 'C:\Users\<username>\Documents\OPSScriptLog.txt')
+    > You can opt to log the script actions to a different path. Default value is in the current User's profile under 'Documents\OPSScriptLog.txt'.
     
 5.  The script will automatically parse your Microsoft 365 Tenant name from the CSV file, please confirm this is correct and continue.
 
