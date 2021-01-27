@@ -146,21 +146,18 @@ When you have finished customizing the file, please save and close it to ensure 
    ![InvokeExpression](./README-Images/InvokeExpression.png)
 
 4. Select your SharePoint Environment, 1 for SharePoint Online/365, or 2 for SharePoint 2016/2019 On-Premises
-   ![MainMenu](./README-Images/MainMenu.png)
-   
-5. Enter the name of your Office 365 Tenant to authenticate against the SharePoint Administration Site using the SharePoint Online Management Shell. This is required to iterate across the Site Collections you have listed in the CSV file. For On-Premises, this step will prompt you for your Root Site Collection instead. You can also see above how the script has parsed the CSV file.
-   ![TenantPrompt](./README-Images/TenantPrompt.png)
+   ![ONP_MainMenu](./README-Images/ONP_MainMenu.png)
 
-6. If you would like to automatically create the OnePlaceMail Email Columns in the Site Collections listed in the CSV, you can opt to do so now. Both options will prompt you for the Column Group Name that contains (or will contain) the OnePlaceMail Email Columns. Default name is 'OnePlace Solutions'
+5. If you would like to automatically create the OnePlaceMail Email Columns in the Site Collections listed in the CSV, you can opt to do so now. Both options will prompt you for the Column Group Name that contains (or will contain) the OnePlaceMail Email Columns. Default name is 'OnePlace Solutions'
    ![CreateColumnsPrompt](./README-Images/CreateColumnsPrompt.png)
 
-7. If you would like to automatically create a default Email View in the Document Libraries listed in the CSV, you can also opt to do so now. This will create a default view with the email columns: 'EmDate', 'Name','EmTo', 'EmFrom', 'EmSubject'. Default name is 'OnePlaceMail Emails'.
+6. If you would like to automatically create a default Email View in the Document Libraries listed in the CSV, you can also opt to do so now. This will create a default view with the email columns: 'EmDate', 'Name','EmTo', 'EmFrom', 'EmSubject'. Default name is 'OnePlaceMail Emails'.
   ![EmailViewPrompt](./README-Images/EmailViewPrompt.PNG)
 
-8. Once the email columns have been created or found in your Site Collection(s), you will be prompted to confirm these are the columns you intend to add to the Site Content Types listed in the CSV (and by extension your Document Libraries listed). Type 'Y' and press Enter to continue if they are correct. The pictured example contains all the OnePlaceSolutions Email Columns.
+7. Once the email columns have been created or found in your Site Collection(s), you will be prompted to confirm these are the columns you intend to add to the Site Content Types listed in the CSV (and by extension your Document Libraries listed). Type 'Y' and press Enter to continue if they are correct. The pictured example contains all the OnePlaceSolutions Email Columns.
   ![ColumnsFoundConfirm](./README-Images/ColumnsFoundConfirm.PNG)
 
-9. The script will now add (and create if opted for) the Email Columns to the Email Content Types listed in the CSV, and add those Email Content Types to the Document Libraries listed in the CSV. If you opted for a default Email View to be created, it will also be done now. In this example the script has created the two Content Types listed in the sample CSV, added the Email Columns, and then added those Content Types to the Document Library listed in the sample CSV
+8. The script will now add (and create if opted for) the Email Columns to the Email Content Types listed in the CSV, and add those Email Content Types to the Document Libraries listed in the CSV. If you opted for a default Email View to be created, it will also be done now. In this example the script has created the two Content Types listed in the sample CSV, added the Email Columns, and then added those Content Types to the Document Library listed in the sample CSV
   ![FinishDeployment](./README-Images/FinishDeployment.PNG)
 
 ## License
