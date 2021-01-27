@@ -609,7 +609,9 @@ Try {
         Write-Host "5: Email View Name: $($script:emailViewname)"
         Write-Host "6: Set View '$($script:emailViewName)' as default: $($script:emailViewDefault)"
         Write-Host "7: Deploy"
-        Write-Host "Q: Press 'Q' to quit."
+        Write-Host "`nAdditional Configuration Options:" -ForegroundColor Yellow
+        Write-Host "L: Change Log file path (currently: '$script:logPath')"
+        Write-Host "`nQ: Press 'Q' to quit."
     }
 
     #Menu to check if the user wants us to create a default Email View in the Document Libraries
@@ -733,6 +735,25 @@ Try {
                 }
                 Start-Sleep -Seconds 3
                 showEnvMenu
+            }
+            'l' {
+                $newLogPath = (Read-Host "Please enter a new path including 'OPSScriptLog.txt' and quotes for the new log file. Eg, 'C:\Users\John\Documents\OPSScriptLog.txt'.")
+                $newLogPath = $newLogPath.Replace('\\','\')
+                If ([string]::IsNullOrWhiteSpace($newLogPath)) {
+                    Write-Host "No path entered, keeping default '$script:logPath'"
+                }
+                Else {
+                    If(-not (Test-Path $newLogPath)) {
+                        Move-Item -Path $script:logPath -Destination $newLogPath
+                    }
+                    Else {
+                        Write-Log "Log file exists at $newLogPath, changing path and appending log data."
+                        Add-Content -Path $newLogPath -Value (Get-Content -Path $script:logPath)
+                        Remove-Item -Path $script:logPath
+                    }
+                    $script:logPath = $newLogPath
+                }
+                Pause
             }
             'q' { return }
         }
