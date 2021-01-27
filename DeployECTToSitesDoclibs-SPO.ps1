@@ -338,12 +338,13 @@ Try {
                 Else {
                     ForEach ($ct in $this.contentTypes) {
                         Try {
-                            Write-Log "Checking if Content Type '$ct' already exists"
-                            $foundContentType = Get-PnPContentType -Identity $ct
-                
-                            #If Content Type object returned is null, assume Content Type does not exist, create it. 
-                            #If it does exist and we just failed to find it, this will throw exceptions for 'Duplicate Content Type found', and then continue.
-                            If ($null -eq $foundContentType) {
+                            $foundContentType = $null
+                            Try {
+                                Write-Log "Checking if Content Type '$ct' already exists"
+                                $foundContentType = Get-PnPContentType -Identity $ct
+                            }
+                            Catch {
+                                #If it does exist and we just failed to find it, this will throw exceptions for 'Duplicate Content Type found', and then continue.
                                 Write-Log "Couldn't find Content Type '$ct', might not exist"
                                 #Creating content type
                                 Try {
@@ -356,7 +357,7 @@ Try {
                             }
                         }
                         Catch {
-                            Write-Log -Level Error -Message "Error checking for existence of Content Type '$ct'."
+                            Throw $_
                         }
 
                         #Try adding columns to the Content Type
