@@ -201,7 +201,7 @@ Try {
                 
                 If($true -eq $parentSiteCollection) {
                     Connect-PnPOnline -Url $this.url -PnPManagementShell
-                    Write-Log " >Connecting to parent Site Collection<"
+                    Write-Log "->Connecting to parent Site Collection"
                     Connect-PnPOnline -Url $((Get-PnPSite).Url) -PnPManagementShell
                 }
                 Else {
