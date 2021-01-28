@@ -27,6 +27,7 @@ Notes regarding the CSV file:
 * When listing a subsite/subweb for the 'SiteUrl', the content type will be created in it's parent Site Collection, eg http./<span>contoso.sharepoint.com/sites/**SiteCollection**/SubSite. You can still list a Document Library within that Subsite to have the Site Content Type added to.
 * You may use this script for purely Site Column/Content Type creation by omitting any data for the Document Library column.
 * Any Site Content Types listed in the CSV that already exist in your SharePoint Environment will have the Email Columns added to it (and preserve the existing columns).
+* Built-in Document Libraries must be named as you see them in your user language, eg if the Site is in Norwegian the 'Documents' library is called 'Dokumenter', if your profile is set to English you will see this in the browser as 'Documents' and must use 'Documents' in this script. If your user profile language aligns to the SharePoint Site language then use what is present in SharePoint.
 
 When you have finished customizing the file, please save and close it to ensure the script can correctly read it.
 
