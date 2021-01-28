@@ -191,15 +191,25 @@ Try {
                 }
             }
             Write-Log "Is this a subsite? $($this.isSubSite)"
-            $this.url = $rootUrl
+            #$this.url = $rootUrl
+            $this.url = $url
         }
 
-        [boolean]connect() {
+        [boolean]connect([boolean]$parentSiteCollection) {
             Try {
-                #Connect to site collection
-                Connect-PnPOnline -Url $this.url -PnPManagementShell
+                #Connect to site
+                
+                If($true -eq $parentSiteCollection) {
+                    Connect-PnPOnline -Url $this.url -PnPManagementShell
+                    Write-Log " >Connecting to parent Site Collection<"
+                    Connect-PnPOnline -Url $((Get-PnPSite).Url) -PnPManagementShell
+                }
+                Else {
+                    Connect-PnPOnline -Url $this.url -PnPManagementShell
+                }
+                
                 #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
-                Start-Sleep -Seconds 3
+                #Start-Sleep -Seconds 3
                 Try {
                     Write-Log "Testing connection with 'Get-PnPWeb'..."
                     $currentWeb = Get-PnPWeb -ErrorAction Stop
@@ -261,6 +271,9 @@ Try {
 
         #Creates the Email Columns in the given Site Collection. Taken from the existing OnePlaceSolutions Email Column deployment script
         [void]createEmailColumns() {
+            If($this.isSubSite) {
+                $this.connect($true)
+            }
             Try {
                 $tempColumns = Get-PnPField -Group $script:columnGroupName
                 $script:emailColumnCount = 0
@@ -281,43 +294,50 @@ Try {
             }
             #Create the Columns if we didn't find 35
             Else {
-                $script:columnsXMLPath = "$env:temp\email-columns.xml"
-                If (-not (Test-Path $script:columnsXMLPath)) {
-                    #From 'https://github.com/OnePlaceSolutions/EmailColumnsPnP/blob/master/installEmailColumns.ps1'
-                    #Download xml provisioning template
-                    $WebClient = New-Object System.Net.WebClient
-                    $downloadUrl = "https://raw.githubusercontent.com/OnePlaceSolutions/EmailColumnsPnP/master/email-columns.xml"    
+                    $script:columnsXMLPath = "$env:temp\email-columns.xml"
+                    If (-not (Test-Path $script:columnsXMLPath)) {
+                        #From 'https://github.com/OnePlaceSolutions/EmailColumnsPnP/blob/master/installEmailColumns.ps1'
+                        #Download xml provisioning template
+                        $WebClient = New-Object System.Net.WebClient
+                        $downloadUrl = "https://raw.githubusercontent.com/OnePlaceSolutions/EmailColumnsPnP/master/email-columns.xml"    
                 
-                    Write-Log "Downloading provisioning xml template:" $script:columnsXMLPath
-                    $WebClient.DownloadFile( $downloadUrl, $script:columnsXMLPath )
-                }
+                        Write-Log "Downloading provisioning xml template:" $script:columnsXMLPath
+                        $WebClient.DownloadFile( $downloadUrl, $script:columnsXMLPath )
+                    }
 
-                #Apply xml provisioning template to SharePoint
-                Write-Log "Applying email columns template to SharePoint: $($this.url)"
+                    #Apply xml provisioning template to SharePoint
+                    Write-Log "Applying email columns template to SharePoint: $($this.url)"
         
-                $rawXml = Get-Content $script:columnsXMLPath
+                    $rawXml = Get-Content $script:columnsXMLPath
         
-                #To fix certain compatibility issues between site template types, we will just pull the Field XML entries from the template
-                ForEach ($line in $rawXml) {
-                    Try {
-                        If (($line.ToString() -match 'Name="Em') -or ($line.ToString() -match 'Name="Doc')) {
-                            $fieldAdded = Add-PnPFieldFromXml -fieldxml $line -ErrorAction Stop | Out-Null
+                    #To fix certain compatibility issues between site template types, we will just pull the Field XML entries from the template
+                    ForEach ($line in $rawXml) {
+                        Try {
+                            If (($line.ToString() -match 'Name="Em') -or ($line.ToString() -match 'Name="Doc')) {
+                                $fieldAdded = Add-PnPFieldFromXml -fieldxml $line -ErrorAction Stop | Out-Null
+                            }
                         }
-                    }
-                    Catch {
-                        If($($_.Exception.Message) -match 'duplicate') {
-                            Write-Log -Level Warn -Message "Duplicate fields detected. $($_.Exception.Message). Continuing script."
-                        }
-                        Else {
-                            Write-Log -Level Error -Message "Error creating Email Column. Error: $($_.Exception.Message)"
+                        Catch {
+                            If($($_.Exception.Message) -match 'duplicate') {
+                                Write-Log -Level Warn -Message "Duplicate fields detected. $($_.Exception.Message). Continuing script."
+                            }
+                            Else {
+                                Write-Log -Level Error -Message "Error creating Email Column. Error: $($_.Exception.Message)"
+                            }
                         }
                     }
                 }
+            If($this.isSubSite) {
+                $this.connect($false)
             }
         }
         
         #Retrieve all the columns/fields for the group specified in this Site Collection, we will add these to the named Content Types shortly. If we do not get the site columns, skip this Site Collection
         [void]createContentTypes() {
+            If($this.isSubSite) {
+                $this.connect($true)
+            }
+            
             $script:emailColumns = Get-PnPField -Group $script:columnGroupName
             If (($null -eq $script:emailColumns) -or ($null -eq $script:columnGroupName)) {
                 Write-Log -Level Warn -Message "Email Columns not found in Site Columns group '$script:columnGroupName' for Site Collection '$($this.name)'. Skipping."
@@ -344,8 +364,8 @@ Try {
                                 $foundContentType = Get-PnPContentType -Identity $ct
                             }
                             Catch {
-                                #If it does exist and we just failed to find it, this will throw exceptions for 'Duplicate Content Type found', and then continue.
-                                Write-Log "Couldn't find Content Type '$ct', might not exist"
+                                #If we encounter any errors on this check we can assume it doesn't exist, but if we failed to find it we should try to create it anyway.
+                                Write-Log "Couldn't find Content Type '$ct', likely does not exist."
                                 #Creating content type
                                 Try {
                                     Write-Log "Creating Content Type '$ct' with parent of 'Document'"
@@ -353,7 +373,7 @@ Try {
                                 }
                                 Catch {
                                     Write-Log -Level Error -Message "Error creating Content Type '$ct' with parent of Document. Details below."
-                                } 
+                                }
                             }
                         }
                         Catch {
@@ -388,6 +408,10 @@ Try {
                         }
                     }
                 }
+            }
+
+            If($this.isSubSite) {
+                $this.connect($false)
             }
         }
     }
@@ -425,12 +449,14 @@ Try {
 
             Write-Host "`nEnabling Content Type Management in Document Library '$($this.name)'." -ForegroundColor Yellow
             Try {
-                Set-PnPList -Identity $($this.name) -EnableContentTypes $true -Web $this.web
+                Set-PnPList -Identity $($this.name) -EnableContentTypes $true
+                # -Web $this.web
                 #For each Site Content Type listed for this docLib/Document Library, try to add it to said Document Library
                 $this.contentTypes | ForEach-Object {
                     Try{
                         Write-Log "Adding Site Content Type '$($_)' to Document Library '$($this.name)'..."
-                        Add-PnPContentTypeToList -List $($this.name) -ContentType $($_) -Web $this.web
+                        Add-PnPContentTypeToList -List $($this.name) -ContentType $($_)
+                        # -Web $this.web
                     }
                     Catch {
                         Write-Log -Level Error -Message "Error adding Site Content Type '$($_)' to Document Library '$($this.name)': $($_.Exception.Message)"
@@ -443,15 +469,14 @@ Try {
             }
             Catch {
                 Write-Log -Level Error -Message "Error enabling Content Type management in Document Library '$($this.name): $($_.Exception.Message). Skipping this Document Library"
+                Pause
             }
-
-
         }
 
         [void]createEmailView([string]$viewName) {
             Try {
                 Try {
-                    $view = Get-PnPView -List $this.name -Identity $viewName -Web $this.web -ErrorAction Stop
+                    $view = Get-PnPView -List $this.name -Identity $viewName -ErrorAction Stop
                     Write-Log "View '$viewName' in Document Library '$($this.name)' already exists, will set as Default View if required but otherwise skipping."
                     If($script:emailViewDefault) {
                         Set-PnPView -List $this.name -Identity $viewName -Values @{DefaultView =$True}
@@ -462,21 +487,20 @@ Try {
                     Write-Log "Adding Email View '$viewName' to Document Library '$($this.name)'."
                     If($script:emailViewDefault) {
                         Write-Log "Email View will be created as default view..."
-                        $view = Add-PnPView -List $this.name -Title $viewName -Fields $script:emailViewColumns -SetAsDefault -RowLimit 100 -Web $this.web -ErrorAction Continue
+                        $view = Add-PnPView -List $this.name -Title $viewName -Fields $script:emailViewColumns -SetAsDefault -RowLimit 100 -ErrorAction Continue
                     }
                     Else {
                         Write-Log "Email View will not be created as default view..."
-                        $view = Add-PnPView -List $this.name -Title $viewName -Fields $script:emailViewColumns -RowLimit 100 -Web $this.web -ErrorAction Continue
+                        $view = Add-PnPView -List $this.name -Title $viewName -Fields $script:emailViewColumns -RowLimit 100 -ErrorAction Continue
                     }
                     #Let SharePoint catch up for a moment
                     Start-Sleep -Seconds 2
-                    $view = Get-PnPView -List $this.name -Identity $viewName -Web $this.web -ErrorAction Stop
+                    $view = Get-PnPView -List $this.name -Identity $viewName -ErrorAction Stop
                     Write-Log "Email View $($viewName) created successfully. As Default? $($script:emailViewDefault)"
                 }
                 Catch{
                     Throw
                 }
-                
             }
             Catch {
                 Write-Log -Level Error -Message "Error checking/creating View '$viewName' in Document Library '$($this.name)': $($_.Exception.Message)"
@@ -629,7 +653,7 @@ Try {
             Write-Log "Working with Web: $($site.web)"
             
             #Authenticate against the Site Collection we are currently working with
-            $connected = $site.connect()
+            $connected = $site.connect($false)
 
             If($connected) {
                 #Check if we are creating email columns, if so, do so now
@@ -779,5 +803,4 @@ Finally {
             #Sink everything, this is just trying to tidy up any open PnP connections
         }
     }
-
 }
