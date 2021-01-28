@@ -275,13 +275,7 @@ Try {
                 $this.connect($true)
             }
             Try {
-                $tempColumns = Get-PnPField -Group $script:columnGroupName
-                $script:emailColumnCount = 0
-                ForEach ($col in $tempColumns) {
-                    If (($col.InternalName -match 'Em') -or ($col.InternalName -match 'Doc')) {
-                        $script:emailColumnCount++
-                    }
-                }
+                $script:emailColumns = Get-PnPField -Group $script:columnGroupName
             }
             Catch {
                 #This is fine, we will just try to add the columns anyway
@@ -289,44 +283,57 @@ Try {
             }
 
             #Check if we have 35 columns in our Column Group
-            If ($script:emailColumnCount -eq 35) {
+            If ($script:emailColumns.Count -eq 35) {
                 Write-Log "All Email columns already present in group '$script:columnGroupName', skipping adding."
             }
             #Create the Columns if we didn't find 35
             Else {
-                    $script:columnsXMLPath = "$env:temp\email-columns.xml"
-                    If (-not (Test-Path $script:columnsXMLPath)) {
-                        #From 'https://github.com/OnePlaceSolutions/EmailColumnsPnP/blob/master/installEmailColumns.ps1'
-                        #Download xml provisioning template
-                        $WebClient = New-Object System.Net.WebClient
-                        $downloadUrl = "https://raw.githubusercontent.com/OnePlaceSolutions/EmailColumnsPnP/master/email-columns.xml"    
+                $script:columnsXMLPath = "$env:temp\email-columns.xml"
+                If (-not (Test-Path $script:columnsXMLPath)) {
+                    #From 'https://github.com/OnePlaceSolutions/EmailColumnsPnP/blob/master/installEmailColumns.ps1'
+                    #Download xml provisioning template
+                    $WebClient = New-Object System.Net.WebClient
+                    $downloadUrl = "https://raw.githubusercontent.com/OnePlaceSolutions/EmailColumnsPnP/master/email-columns.xml"    
                 
-                        Write-Log "Downloading provisioning xml template:" $script:columnsXMLPath
-                        $WebClient.DownloadFile( $downloadUrl, $script:columnsXMLPath )
-                    }
+                    Write-Log "Downloading provisioning xml template:" $script:columnsXMLPath
+                    $WebClient.DownloadFile( $downloadUrl, $script:columnsXMLPath )
+                }
 
-                    #Apply xml provisioning template to SharePoint
-                    Write-Log "Applying email columns template to SharePoint: $($this.url)"
+                #Apply xml provisioning template to SharePoint
+                Write-Log "Applying email columns template to SharePoint Site Collection: $((Get-PnPSite).Url)"
         
-                    $rawXml = Get-Content $script:columnsXMLPath
+                $rawXml = Get-Content $script:columnsXMLPath
         
-                    #To fix certain compatibility issues between site template types, we will just pull the Field XML entries from the template
-                    ForEach ($line in $rawXml) {
-                        Try {
-                            If (($line.ToString() -match 'Name="Em') -or ($line.ToString() -match 'Name="Doc')) {
-                                $fieldAdded = Add-PnPFieldFromXml -fieldxml $line -ErrorAction Stop | Out-Null
-                            }
+                #To fix certain compatibility issues between site template types, we will just pull the Field XML entries from the template
+                ForEach ($line in $rawXml) {
+                    Try {
+                        If (($line.ToString() -match 'Name="Em') -or ($line.ToString() -match 'Name="Doc')) {
+                            $fieldAdded = Add-PnPFieldFromXml -fieldxml $line -ErrorAction Stop | Out-Null
                         }
-                        Catch {
-                            If($($_.Exception.Message) -match 'duplicate') {
-                                Write-Log -Level Warn -Message "Duplicate fields detected. $($_.Exception.Message). Continuing script."
-                            }
-                            Else {
-                                Write-Log -Level Error -Message "Error creating Email Column. Error: $($_.Exception.Message)"
-                            }
+                    }
+                    Catch {
+                        If($($_.Exception.Message) -match 'duplicate') {
+                            Write-Log -Level Warn -Message "Duplicate fields detected. $($_.Exception.Message). Continuing script."
+                        }
+                        Else {
+                            Write-Log -Level Error -Message "Error creating Email Column. Error: $($_.Exception.Message)"
                         }
                     }
                 }
+                
+                $columnCheckRetry = 5
+                Do {
+                    $script:emailColumns = Get-PnPField -Group $script:columnGroupName
+                    If($script:emailColumns.Count -ne 35) {
+                        $columnCheckRetry--
+                        Start-Sleep -Seconds 1
+                    }
+                    Else {
+                        $columnCheckRetry = 0
+                    }
+                }
+                Until($columnCheckRetry -eq 0)
+            }
             If($this.isSubSite) {
                 $this.connect($false)
             }
@@ -338,9 +345,10 @@ Try {
                 $this.connect($true)
             }
             
+            #Retrieve the email columns to make sure we have what is currently in SharePoint
             $script:emailColumns = Get-PnPField -Group $script:columnGroupName
             If (($null -eq $script:emailColumns) -or ($null -eq $script:columnGroupName)) {
-                Write-Log -Level Warn -Message "Email Columns not found in Site Columns group '$script:columnGroupName' for Site Collection '$($this.name)'. Skipping."
+                Write-Log -Level Warn -Message "Email Columns not found in Site Columns group '$script:columnGroupName' for Site Collection '$((Get-PnPSite).Url)'. Skipping this Site Collection and it's subwebs."
             }
             Else {
                 Write-Log "Columns found for group '$script:columnGroupName':"
@@ -384,6 +392,7 @@ Try {
                         Try {
                             Write-Log "Adding email columns to Site Content Type '$ct'"
                             Start-Sleep -Seconds 2
+
                             $numColumns = $script:emailColumns.Count
                             $i = 0
                             $emSubjectFound = $false
@@ -392,8 +401,16 @@ Try {
                                 If ($column -eq 'EmSubject') {
                                     $emSubjectFound = $true
                                 }
-                                Add-PnPFieldToContentType -Field $column -ContentType $ct
                                 Write-Progress -Activity "Adding column: $column" -Status "To Site Content Type: $ct in Site Collection: $($this.name). Progress:" -PercentComplete ($i / $numColumns * 100)
+                                Try {
+                                    Add-PnPFieldToContentType -Field $column -ContentType $ct
+                                }
+                                Catch {
+                                    #Graph is catching up, back off and retry once
+                                    Start-Sleep -Seconds 2
+                                    Add-PnPFieldToContentType -Field $column -ContentType $ct
+                                }
+                                
                                 $i++
                             }
                             If (($false -eq $emSubjectFound) -or ($numColumns -ne 35)) {
@@ -487,11 +504,11 @@ Try {
                     Write-Log "Adding Email View '$viewName' to Document Library '$($this.name)'."
                     If($script:emailViewDefault) {
                         Write-Log "Email View will be created as default view..."
-                        $view = Add-PnPView -List $this.name -Title $viewName -Fields $script:emailViewColumns -SetAsDefault -RowLimit 100 -ErrorAction Continue
+                        Add-PnPView -List $this.name -Title $viewName -Fields $script:emailViewColumns -SetAsDefault -RowLimit 100 -ErrorAction Continue
                     }
                     Else {
                         Write-Log "Email View will not be created as default view..."
-                        $view = Add-PnPView -List $this.name -Title $viewName -Fields $script:emailViewColumns -RowLimit 100 -ErrorAction Continue
+                        Add-PnPView -List $this.name -Title $viewName -Fields $script:emailViewColumns -RowLimit 100 -ErrorAction Continue
                     }
                     #Let SharePoint catch up for a moment
                     Start-Sleep -Seconds 2
