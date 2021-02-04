@@ -7,11 +7,9 @@ A script and sample CSV file to create the OnePlace Solutions Email Columns, add
 1. [Getting Started](#getting-started)\
     1a. [Pre-Requisites](#pre-requisites)\
     1b. [Assumptions and Considerations](#assumptions-and-considerations)\
-    1c. [Restrictions](#restrictions)
 2. [SharePoint Online](#sharepoint-online)
-3. [SharePoint On-Premise](#sharepoint-on-premise)
-4. [License](#license)
-5. [Acknowledgments](#acknowledgments)
+3. [License](#license)
+4. [Acknowledgments](#acknowledgments)
 
 ## Getting Started
 
@@ -34,19 +32,7 @@ When you have finished customizing the file, please save and close it to ensure 
 ### Pre-Requisites
 
 1.  Administrator rights to your SharePoint Admin Site (for SharePoint Online) and the Site Collections you wish to deploy to.
-2.  **(SharePoint On-Premise Only)** [The SharePoint PnP PowerShell cmdlets](https://github.com/pnp/PnP-PowerShell). 
-    You will need to install **only the the cmdlets that target your version of SharePoint** on the machine you are running the script from. If you have installed the cmdlets previously using an MSI file these need to be uninstalled from Control Panel, but if you have installed the cmdlets previously using PowerShell Get you can update them with this command:
-    ```
-    Update-Module SharePointPnPPowerShell<version>
-    ```
-    
-    This is the command pictured to install the PnP Cmdlets via PowerShell Get:
-    ```
-    Install-Module SharePointPnPPowerShell<version>
-    ```
-    > ![](./README-Images/installPnPClassic.png)
-	
-3.  **(SharePoint Online Only)** (Multi-Tenant supported) [The latest PnP.PowerShell](https://pnp.github.io/powershell/articles/installation.html) installed on the machine you are running the script from. You can run the below command in PowerShell (as Administrator) to install it. 
+2.  **(SharePoint Online Only)** (Multi-Tenant supported) [The latest PnP.PowerShell](https://pnp.github.io/powershell/articles/installation.html) installed on the machine you are running the script from. You can run the below command in PowerShell (as Administrator) to install it. 
 
     Install new PnP.PowerShell Cmdlets:
     ```
@@ -73,10 +59,6 @@ When you have finished customizing the file, please save and close it to ensure 
 * Content Type(s) to be created will have the Site Content Type 'Document' for it's Parent Content Type. 
 * Column group name supplied to the script (when prompted) will have all it's columns added to the Content Type(s). If your current Email Columns exist in a group with other columns, please add them to a new Column group to use with this script
 * When using this script to add the Email Columns to an existing Content Type, this existing Content Type must be a Site Content Type, and it may be updated to inherit from the 'Document' Site Content Type in the process.
-
-### Restrictions
-
-* Only works for SharePoint Online or 2016/2019 environments. SharePoint 2013 is not supported with this script.
 * Only works with Site Content Types (for both creation and adding Email Columns to existing) inheriting from the 'Document' Site Content Type. These Site Content Types can however still be added to locations within subsites/subwebs.
 
 ## SharePoint Online
@@ -129,36 +111,6 @@ When you have finished customizing the file, please save and close it to ensure 
 6.  You will be asked to authenticate to your SharePoint Admin Site through the PnP Management Shell. Please follow the directions from the script to copy the code into the browser, and if required consent to the PnP Management Shell.
     ![SPO_PnPManagementShellLogin](./README-Images/SPO_PnPManagementShellLogin.png)
 
-## SharePoint On-Premise
-
-1. Download the CSV file and modify it to suit your deployment requirements. 
-
-   ![EditCSV](./README-Images/EditCSV.PNG)
-
-2. Start PowerShell (as Administrator) on your machine:
-   ![StartPowerShell](./README-Images/StartPowerShell.png)
-
-3. Run the below command to invoke the current(master) version of the script:
-
-   ```
-   Invoke-Expression (New-Object Net.WebClient).DownloadString(‘https://raw.githubusercontent.com/OnePlaceSolutions/ContentTypeDeploymentPnP/master/DeployECTToSitesDoclibs-ONP.ps1’)
-   ```
-   ![InvokeExpression](./README-Images/InvokeExpression.png)
-
-4. Select your SharePoint Environment, 1 for SharePoint Online/365, or 2 for SharePoint 2016/2019 On-Premises
-   ![ONP_MainMenu](./README-Images/ONP_MainMenu.png)
-
-5. If you would like to automatically create the OnePlaceMail Email Columns in the Site Collections listed in the CSV, you can opt to do so now. Both options will prompt you for the Column Group Name that contains (or will contain) the OnePlaceMail Email Columns. Default name is 'OnePlace Solutions'
-   ![CreateColumnsPrompt](./README-Images/CreateColumnsPrompt.png)
-
-6. If you would like to automatically create a default Email View in the Document Libraries listed in the CSV, you can also opt to do so now. This will create a default view with the email columns: 'EmDate', 'Name','EmTo', 'EmFrom', 'EmSubject'. Default name is 'OnePlaceMail Emails'.
-  ![EmailViewPrompt](./README-Images/EmailViewPrompt.PNG)
-
-7. Once the email columns have been created or found in your Site Collection(s), you will be prompted to confirm these are the columns you intend to add to the Site Content Types listed in the CSV (and by extension your Document Libraries listed). Type 'Y' and press Enter to continue if they are correct. The pictured example contains all the OnePlaceSolutions Email Columns.
-  ![ColumnsFoundConfirm](./README-Images/ColumnsFoundConfirm.PNG)
-
-8. The script will now add (and create if opted for) the Email Columns to the Email Content Types listed in the CSV, and add those Email Content Types to the Document Libraries listed in the CSV. If you opted for a default Email View to be created, it will also be done now. In this example the script has created the two Content Types listed in the sample CSV, added the Email Columns, and then added those Content Types to the Document Library listed in the sample CSV
-  ![FinishDeployment](./README-Images/FinishDeployment.PNG)
 
 ## License
 
