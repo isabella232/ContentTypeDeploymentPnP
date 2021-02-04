@@ -6,7 +6,7 @@ A script and sample CSV file to create the OnePlace Solutions Email Columns, add
 
 1. [Getting Started](#getting-started)\
     1a. [Pre-Requisites](#pre-requisites)\
-    1b. [Assumptions and Considerations](#assumptions-and-considerations)\
+    1b. [Assumptions and Considerations](#assumptions-and-considerations)
 2. [SharePoint Online](#sharepoint-online)
 3. [License](#license)
 4. [Acknowledgments](#acknowledgments)
