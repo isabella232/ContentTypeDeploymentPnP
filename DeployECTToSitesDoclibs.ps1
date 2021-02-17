@@ -103,7 +103,7 @@ Try {
 
     #Check for module versions of PnP / SPOMS
     Try {
-        Write-Host "Checking if PnP / SPOMS installed via Module..." -ForegroundColor Cyan
+        Write-Host "Checking if PnP / SPOMS installed via Module and logging version..." -ForegroundColor Cyan
         $pnpModule = Get-InstalledModule SharePointPnPPowerShell* | Select-Object Name, Version
         $spomsModule = Get-InstalledModule Microsoft.Online.SharePoint.PowerShell | Select-Object Name, Version
     }
@@ -115,6 +115,7 @@ Try {
         Write-Log -Level Info -Message "SPOMS Module Installed: $spomsModule"
     }
 
+    <#
     #Check for MSI versions of PnP / SPOMS
     Try {
         Write-Host "Checking if PnP / SPOMS installed via MSI..." -ForegroundColor Cyan
@@ -128,7 +129,9 @@ Try {
         Write-Log -Level Info -Message "PnP MSI Installed: $pnpMSI"
         Write-Log -Level Info -Message "SPOMS MSI Installed: $spomsMSI"
     }
+    #>
 
+    <#
     If (($null -ne $pnpModule.Count) -or ((0 -ne $pnpMSI.Count) -and (1 -ne $pnpMSI.Count))) {
         Write-Log -Level Warn -Message "Multiple versions of PnP may be installed. This is not supported by PnP and will likely cause issues when running this script.`nPlease uninstall the versions not applicable to your SharePoint version and re-run this script."
         Pause
@@ -143,11 +146,12 @@ Try {
         Write-Log -Level Warn -Message "No SharePoint Online Management Shell installation detected! This is required."
         $preReqMissing = $true
     }
-    If ($preReqMissing) {
-        Write-Host "`nPlease ensure you have checked and installed the pre-requisites listed in the GitHub documentation prior to running this script."
-        Write-Host "!!! If pre-requisites for the Content Type Deployment have not been completed this script/process may fail !!!" -ForegroundColor Yellow
-        Pause
-    }
+    #>
+
+    Write-Host "`nPlease ensure you have checked and installed the pre-requisites listed in the GitHub documentation prior to running this script."
+    Write-Host "!!! If pre-requisites for the Content Type Deployment have not been completed this script/process may fail !!!" -ForegroundColor Yellow
+    Pause
+    
     Start-Sleep -Seconds 2
 
     #Contains all our Site Collections as siteCol objects
@@ -811,11 +815,6 @@ Try {
                 Write-Log -Level Info -Message "User has selected Option 1 for SPO."
                 Clear-Host
 
-                If((($pnpModule -notlike "*Online*") -or ($null -eq $pnpModule)) -and (($pnpMSI -notlike "*Online*") -or ($null -eq $pnpMSI))){
-                    Write-Log -Level Warn -Message "SharePoint Online selected for deployment, but SharePoint Online PnP CmdLets not installed. Please check installed version before continuing."
-                    Pause
-                }
-
                 #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
                 EnumerateSitesDocLibs
                 #Connect to SharePoint Online, using SharePoint Management Shell against the Admin site
@@ -866,11 +865,6 @@ Try {
                 #On-Premises
                 Write-Log -Level Info -Message "User has selected Option 2 for SP On Prem."
                 Clear-Host
-
-                If(($pnpModule -like "*Online*") -or ($pnpMSI -like "*Online*")){
-                    Write-Log -Level Warn -Message "SharePoint On-Premises selected for deployment, but SharePoint Online PnP CmdLets installed. Please check installed version before continuing."
-                    Pause
-                }
 
                 #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
                 EnumerateSitesDocLibs
