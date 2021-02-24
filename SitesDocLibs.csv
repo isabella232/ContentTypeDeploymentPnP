@@ -1,5 +1,2 @@
-﻿SiteName,SiteUrl,CTName,DocLib,CreateColumns,ViewName,ViewDefault
-Marketing,https://contoso.sharepoint.com/sites/Marketing,OnePlaceMail Email,Emails,TRUE,Email View,TRUE
-Marketing,https://contoso.sharepoint.com/sites/Marketing,OnePlaceMail Email,Documents,TRUE,Email View,FALSE
-Accounting,https://contoso.sharepoint.com/sites/Accounting,ACC Incoming Email,Emails,TRUE,Email View,TRUE
-Accounting,https://contoso.sharepoint.com/sites/Accounting,ACC Outgoing Email,Emails,TRUE,Email View,TRUE
+﻿SiteName,SiteUrl,CTName,DocLib,ViewName,ViewDefault
+Marketing,https://contoso.sharepoint.com/sites/Marketing,OnePlaceMail Email,Emails,Email View,TRUE

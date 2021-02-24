@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 
 [string]$script:logFile = "OPSScriptLog$(Get-Date -Format "MMddyyyy").txt"
 [string]$script:logPath = "$env:userprofile\Documents\$script:logFile"
-[string]$script:csvFile = ""
+[string]$script:csvFile = "None"
 [opsTenant]$script:tenant = [opsTenant]::new()
 
 function Write-Log { 
@@ -109,19 +109,19 @@ class opsTenant {
     }
 
     [void]enumerateCSV() {
-        If ("" -eq $script:csvFile) {
-            Write-Host "Please select your customized CSV containing the Site Collections and Document Libraries to create the Content Types in"
-            Start-Sleep -seconds 1
-            $FileBrowser = New-Object System.Windows.Forms.OpenFileDialog -Property @{ 
-                InitialDirectory = [Environment]::GetFolderPath('Desktop') 
-                Filter           = 'Comma Separates Values (*.csv)|*.csv'
-                Title            = 'Select your CSV file'
-            }
-            $null = $FileBrowser.ShowDialog()
-            
-            $script:csvFile = $FileBrowser.FileName
-            Write-Log -Level Info -Message "Using CSV at path '$($script:csvFile)'"
+
+        Write-Host "Please select your customized CSV containing the Site Collections and Document Libraries to create the Content Types in"
+        Start-Sleep -seconds 1
+        $FileBrowser = New-Object System.Windows.Forms.OpenFileDialog -Property @{ 
+            InitialDirectory = [Environment]::GetFolderPath('Desktop') 
+            Filter           = 'Comma Separates Values (*.csv)|*.csv'
+            Title            = 'Select your CSV file'
         }
+        $null = $FileBrowser.ShowDialog()
+        
+        $script:csvFile = $FileBrowser.FileName
+        Write-Log -Level Info -Message "Using CSV at path '$($script:csvFile)'"
+        
 
         $script:siteColsHT = [hashtable]::new
         $script:siteColsHT = @{ }
@@ -141,13 +141,6 @@ class opsTenant {
                 Catch {
                     #null values will be treated as $false
                     [boolean]$csv_viewDefault = $false
-                }
-                Try{
-                    [boolean]$csv_createColumns = [System.Convert]::ToBoolean($element.CreateColumns)
-                }
-                Catch {
-                    #null values will be treated as $false
-                    [boolean]$csv_createColumns = $false
                 }
                 [string]$csv_viewName = $element.viewName
 
@@ -178,52 +171,60 @@ class opsTenant {
         If([string]::IsNullOrWhiteSpace($name)) {
             $name = $url
         }
+        
         $site = $this.addSite($name,$url)
         $site.addContentType($contentTypeName)
         $site.addDocLib($docLibName,$contentTypeName,$contentTypeDefault,$viewName,$viewDefault)
 
-        If([string]::IsNullOrWhiteSpace($this.tenantName)) {
+        If("No Tenant Name" -eq $this.tenantName) {
             $url -match 'https://(?<Tenant>.+)\.sharepoint.com' | Out-Null
             $this.tenantName = $Matches.Tenant
+            $this.rootUrl = "https://$($this.tenantName).sharepoint.com"
             Write-Log "Extracted Tenant name '$($this.tenantName)`n"
         }
     }
 
-    [boolean]auth() {
+    [void]auth() {
         Try{
+            Write-Log "Prompting for PnP Management Shell Authentication"
             Connect-PnPOnline -url $this.rootUrl -PnPManagementShell -LaunchBrowser
             $currentWeb = Get-PnPWeb -ErrorAction Stop
-            Write-Log "Connected to $($currentWeb.Title)"
+            Write-Log "Connected to '$($currentWeb.Title)' at '$($this.rootUrl)'"
             $this.authorizedPnP = $true
-            return $true
         }
         Catch{
-            return $false
+            Write-Log -Level Error -Message "Error authorizing against root Site Collection"
+            Write-Log "$_"
         }
     }
 
     [void]execute() {
-        If(0 -eq $this.siteCols.Count) {
-            $this.enumerateCSV()
+        If(0 -eq $this.sites.Count) {
+            If($script:csvFile -eq "None") {
+                $this.enumerateCSV()
+            }
             $this.auth()
         }
         Else {
-            If(-not $this.authorizedPnP) {
+            If(-not $($this.authorizedPnP)) {
                 $this.auth()
             }
         }
-        $this.sites | ForEach-Object {
-            $_.execute()
+        $this.sites.Keys | ForEach-Object {
+            Write-Log "Executing on Site Object $_"
+            $this.sites.Item($_).execute()
         }
     }
 
     [opsSite]addSite([string]$name,[string]$url) {
         If(-not $this.sites.ContainsKey($url)) {
             $sc = [opsSite]::new($name,$url)
+            Write-Log "Adding Site $($name) with URL '$($url)'"
             $this.sites.Add($url,$sc)
             return $sc
         }
         Else {
+            Write-Log "Site $($name) already listed with URL '$($url)'"
             return $this.sites.$url
         }
     }
@@ -232,6 +233,7 @@ class opsTenant {
 class opsSite {
     [string]$name
     [string]$url
+    [boolean]$connected = $false
     [array]$contentTypes = @()
     [boolean]$contentTypesCreated = $false
     [boolean]$emailColumnsCreated = $false
@@ -259,18 +261,22 @@ class opsSite {
 
             #If the Site Collection URL contains the whole Web URL then we are in the Site Collection, not a subweb
             $this.isSiteCollection = ($this.currentSite.url -match $this.currentWeb.url)
+            $this.connected = $true
         }
         Catch{
-            Write-Log -Level Error -Message "Error connecting to Site $($this.name) at URL $($this.url)."
+            Write-Log -Level Error -Message "Error connecting to Site '$($this.name)' at URL '$($this.url)'."
+            $this.connected = $false
         }
     }
 
     [boolean]addContentType([string]$name) {
         If(-not ($this.contentTypes.Contains($name))) {
+            Write-Log "Adding Content Type '$($name)' to Site '$($this.name)' with URL '$($this.url)'"
             $this.contentTypes += $name
             return $true
         }
         Else {
+            Write-Log "Content Type '$($name)' already listed in Site '$($this.name)' with URL '$($this.url)'"
             return $false
         }
     }
@@ -278,6 +284,11 @@ class opsSite {
     [opsDocLib]addDocLib($name,$contentTypeName,$contentTypeDefault,$viewName,$viewDefault) {
         If(-not ($this.docLibs.ContainsKey($name))) {
             $dl = [opsDocLib]::new($name,$this,$contentTypeDefault,$viewName,$viewDefault,$contentTypeName)
+            Write-Log "Adding Document Library $($name) with to Site $($this.name) with URL '$($this.url)'"
+            Write-Log "Content Type Name: $($contentTypeName)"
+            Write-Log "Is Content Type Default: $($contentTypeDefault)"
+            Write-Log "View Name: $($viewName)"
+            Write-Log "Is View Default: $($viewDefault)"
             $this.docLibs.Add($name,$dl)
             return $dl
         }
@@ -305,6 +316,7 @@ class opsSite {
         #Check if we have 35 columns in our Column Group
         If ($emailColumns.Count -eq 35) {
             Write-Log "All Email columns already present in group 'OnePlace Solutions', skipping adding."
+            $this.emailColumnsCreated = $true
         }
         #Create the Columns if we didn't find 35
         Else {
@@ -378,7 +390,7 @@ class opsSite {
                 Write-Log "Email Columns found for group 'OnePlace Solutions':"
                 $emailColumns | Format-Table
                 Write-Host "The Email Columns will be added to the Site Content Types extracted from your CSV file:"
-                $this.contentTypes | Format-Table
+                $this.contentTypes
             
                 #Get the Content Type Object for 'Document' from SP, we will use this as the parent Content Type for our email Content Type
                 $DocCT = Get-PnPContentType -Identity 0x0101
@@ -464,10 +476,15 @@ class opsSite {
 
     [void]execute() {
         $this.connect()
-        $this.createContentTypes()
+        If($this.connected) {
+            $this.createContentTypes()
 
-        $this.docLibs | ForEach-Object {
-            $_.execute()
+            $this.docLibs.Values | ForEach-Object {
+                $_.execute()
+            }
+        }
+        Else {
+            Write-Log -Level Warn -Message "Couldn't connect to Site, skipping"
         }
     }
 }
@@ -500,25 +517,43 @@ class opsDocLib {
     }
     [void]execute() {
         $this.contentTypes | ForEach-Object {
-            Write-Log "Adding Content Type $($_) to Document Library $($this.name) in Site $($this.site.name)"
-            Add-PnPContentTypeToList -List $this.name -ContentType $_
-            If($contentTypeDefault -and (1 -eq $this.contentTypes.Count)) {
-                Write-Log "Default Content Type flag has been set and there is only one Content Type listed for creation. Setting $($_) as Default Content Type"
-                Set-PnPDefaultContentTypeToList -List $this.name -ContentType $_
+            Write-Log "Adding Content Type '$($_)' to Document Library '$($this.name)' in Site '$($this.site.name)'"
+            Try {
+                Add-PnPContentTypeToList -List $this.name -ContentType $_
+                If($contentTypeDefault -and (1 -eq $this.contentTypes.Count)) {
+                    Write-Log "Default Content Type flag has been set and there is only one Content Type listed for creation. Setting $($_) as Default Content Type"
+                    Set-PnPDefaultContentTypeToList -List $this.name -ContentType $_
+                }
+            }
+            Catch {
+                Write-Log -Level Error -Message "Error adding Content Type '$($_)' to Document Library '$($this.name)' in Site '$($this.site.name)'. Does this Library exist? `nSkipping."
             }
         }
 
         Write-Log "Adding View $($this.viewName) to Document Library $($this.name) in Web $($this.web)"
-        Add-PnPView -List $this.name -Title $this.viewName -Fields $script:emailViewColumns
-        If($this.viewDefault) {
-            Write-Log "Default View flag has been set, modifying view to be Default"
-            Set-PnPView -List $this.name -Identity $this.viewName -Values @{DefaultView =$True}
+        Try {
+            Try {
+                #Check if view exists
+                Get-PnPView -List $this.name -Identity $this.viewName
+            }
+            Catch {
+                #View does not exist
+                Add-PnPView -List $this.name -Title $this.viewName -Fields $script:emailViewColumns
+                
+            }
+            If($this.viewDefault) {
+                Write-Log "Default View flag has been set, modifying view to be Default"
+                Set-PnPView -List $this.name -Identity $this.viewName -Values @{DefaultView =$True}
+            }
+        }
+        Catch {
+            Write-Log -Level Error -Message "Error adding View '$($this.viewName)' to Document Library '$($this.name)' in Site '$($this.site.name)'. Does this Library exist? `nSkipping."
         }
     }
 }
 
 
- #Start of Script
+#Start of Script
 #----------------------------------------------------------------
 
 function showEnvMenu { 
@@ -527,7 +562,7 @@ function showEnvMenu {
     Write-Host 'Welcome to the OnePlace Solutions Content Type Deployment Script' -ForegroundColor Green
     Write-Host "`n--------------------------------------------------------------------------------`n" -ForegroundColor Red
     Write-Host 'Please make a selection to set, toggle, change or execute:' -ForegroundColor Yellow
-    Write-Host "1: Select CSV File"
+    Write-Host "1: Select CSV File (currently: '$script:csvFile')"
     Write-Host "2: Deploy"
     Write-Host "`nAdditional Configuration Options:" -ForegroundColor Yellow
     Write-Host "L: Change Log file path (currently: '$script:logPath')"
@@ -582,4 +617,11 @@ do {
     }
 } 
 Until($userInput -eq 'q') {
+}
+
+Try {
+    Disconnect-PnPOnline
+}
+Catch{
+    #just cleaning up, no issue if we can't disconnect
 }
