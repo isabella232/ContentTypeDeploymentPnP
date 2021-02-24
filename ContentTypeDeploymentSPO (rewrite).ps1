@@ -470,7 +470,7 @@ class opsSite {
         }
         Else {
             $this.createEmailColumns()
-            $this.CreateContentTypes()
+            $this.createContentTypes()
         }
     }
 
@@ -503,16 +503,12 @@ class opsDocLib {
         $this.contentTypeDefault = $contentTypeDefault
         $this.viewName = $viewName
         $this.viewDefault = $viewDefault
-        $this.contentTypes += $contentType
+        $this.addContentType($contentType)
     }
 
-    [boolean]addContentType($name) {
-        If(-not ($this.contentTypes.Contains($name))) {
+    [void]addContentType($name) {
+        If((-not ($this.contentTypes.Contains($name))) -and (-not [string]::IsNullOrWhiteSpace($name))) {
             $this.contentTypes += $name
-            return $true
-        }
-        Else {
-            return $false
         }
     }
     [void]execute() {
@@ -530,24 +526,29 @@ class opsDocLib {
             }
         }
 
-        Write-Log "Adding View $($this.viewName) to Document Library $($this.name) in Web $($this.web)"
-        Try {
+        If( -not [string]::IsNullOrWhiteSpace($this.viewName)) {
+            Write-Log "Adding View $($this.viewName) to Document Library $($this.name) in Web $($this.web)"
             Try {
-                #Check if view exists
-                Get-PnPView -List $this.name -Identity $this.viewName
+                Try {
+                    #Check if view exists
+                    Get-PnPView -List $this.name -Identity $this.viewName
+                }
+                Catch {
+                    #View does not exist
+                    Add-PnPView -List $this.name -Title $this.viewName -Fields $script:emailViewColumns
+                    
+                }
+                If($this.viewDefault) {
+                    Write-Log "Default View flag has been set, modifying view to be Default"
+                    Set-PnPView -List $this.name -Identity $this.viewName -Values @{DefaultView =$True}
+                }
             }
             Catch {
-                #View does not exist
-                Add-PnPView -List $this.name -Title $this.viewName -Fields $script:emailViewColumns
-                
-            }
-            If($this.viewDefault) {
-                Write-Log "Default View flag has been set, modifying view to be Default"
-                Set-PnPView -List $this.name -Identity $this.viewName -Values @{DefaultView =$True}
+                Write-Log -Level Error -Message "Error adding View '$($this.viewName)' to Document Library '$($this.name)' in Site '$($this.site.name)'. Does this Library exist? `nSkipping."
             }
         }
-        Catch {
-            Write-Log -Level Error -Message "Error adding View '$($this.viewName)' to Document Library '$($this.name)' in Site '$($this.site.name)'. Does this Library exist? `nSkipping."
+        Else {
+            Write-Log "No view name defined, skipping view operations for Document Library $($this.name)"
         }
     }
 }
