@@ -5,8 +5,9 @@ A script and sample CSV file to create the OnePlace Solutions Email Columns, add
 ## Table of Contents
 
 1. [Getting Started](#getting-started)\
-    1a. [Pre-Requisites](#pre-requisites)\
-    1b. [Assumptions and Considerations](#assumptions-and-considerations)
+    1a. [Modifying the CSV File](#modifying-the-csv-file)
+	1b. [Pre-Requisites](#pre-requisites)\
+    1c. [Assumptions and Considerations](#assumptions-and-considerations)
 2. [Usage](#usage)
 3. [License](#license)
 4. [Acknowledgments](#acknowledgments)
@@ -14,6 +15,8 @@ A script and sample CSV file to create the OnePlace Solutions Email Columns, add
 ## Getting Started
 
 Please read the entire README (this page) before using the script to ensure you understand it's prerequisites and considerations/limitations.
+
+### Modifying the CSV file
 
 Download the 'SitesDocLibs.csv' file ([Right Click this link](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/raw/master/SitesDocLibs.csv) and select 'Save target as' or 'Save link as'), and ensure you save it as a .CSV file. Customize it to your requirements per the notes below, you will be prompted for this file by the script.
 If the sample data appears to be in one column in Excel, please try importing the CSV file into Excel via the Data tab instead of opening it directly.
@@ -29,8 +32,7 @@ Notes regarding the CSV file:
 
 When you have finished customizing the file, please save and close it to ensure the script can correctly read it.
 
-## Pre-Requisites
-
+### Pre-Requisites
 
 1.  SharePoint Online, with administrative rights to your SharePoint Admin Site and the Site Collections you are deploying to
 
@@ -67,21 +69,21 @@ When you have finished customizing the file, please save and close it to ensure 
 
 1. Download the CSV file and modify it to suit your deployment requirements. 
 
-   ![EditCSV](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/blob/master/README-Images/EditCSV.PNG)
+   ![EditCSV](./README-Images/EditCSV.PNG)
 
 2. Start PowerShell (as Administrator) on your machine:
-   ![StartPowerShell](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/blob/master/README-Images/StartPowerShell.png)
+   ![StartPowerShell](./README-Images/StartPowerShell.png)
 
 3. Run the below command to invoke the current(master) version of the script:
 
    ```
    Invoke-Expression (New-Object Net.WebClient).DownloadString(‘https://raw.githubusercontent.com/OnePlaceSolutions/ContentTypeDeploymentPnP/master/DeployECTToSitesDoclibs.ps1’)
    ```
-   ![InvokeExpression](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/blob/master/README-Images/InvokeExpression.png)
+   ![InvokeExpression](./README-Images/InvokeExpression.png)
 
-4. Select option 1 and navigate to your pre-prepared SitesDocLibs.csv file. You will see output in the PowerShell window showing how the script interpreted what you entered, and you can double check it before continuing.
+4. Select Option 1 and navigate to your pre-prepared SitesDocLibs.csv file. You will see output in the PowerShell window showing how the script interpreted what you entered, and you can double check it before continuing.
 
-5. Select option 2 to deploy.
+5. Select Option 2 to deploy.
 
 
 ## License
