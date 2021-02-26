@@ -5,8 +5,8 @@ A script and sample CSV file to create the OnePlace Solutions Email Columns, add
 ## Table of Contents
 
 1. [Getting Started](#getting-started)\
-    1a. [Modifying the CSV File](#modifying-the-csv-file)
-	1b. [Pre-Requisites](#pre-requisites)\
+    1a. [Modifying the CSV File](#modifying-the-csv-file)\
+    1b. [Pre-Requisites](#pre-requisites)\
     1c. [Assumptions and Considerations](#assumptions-and-considerations)
 2. [Usage](#usage)
 3. [License](#license)
