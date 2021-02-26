@@ -18,12 +18,18 @@ Please read the entire README (this page) before using the script to ensure you 
 
 ### Modifying the CSV file
 
-Download the 'SitesDocLibs.csv' file ([Right Click this link](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/raw/master/SitesDocLibs.csv) and select 'Save target as' or 'Save link as'), and ensure you save it as a .CSV file. Customize it to your requirements per the notes below, you will be prompted for this file by the script.
+![EditCSV](./README-Images/EditCSV.PNG)
+
+Download the 'SitesDocLibs.csv' file ([Right Click this link](./SitesDocLibs.csv) and select 'Save target as' or 'Save link as'), and ensure you save it as a .CSV file. Customize it to your requirements per the notes below, you will be prompted for this file by the script.
 If the sample data appears to be in one column in Excel, please try importing the CSV file into Excel via the Data tab instead of opening it directly.
 If the script fails to import the contents of the CSV file, please check the CSV file in Notepad to check that the columns appear similar to [this](https://github.com/OnePlaceSolutions/ContentTypeDeploymentPnP/blob/master/SitesDocLibs.csv) and the delimiter is still a comma ','. European formatting in Excel may cause this issue, in which case customize the CSV file in Notepad.
 
 Notes regarding the CSV file:
-* The SitesDocLibs.CSV file already contains an example deployment for the 'Contoso' Tenant. If run, it would deploy the Email Content Type 'OnePlaceMail Email' to the 'Emails' Document Library in the 'Marketing' Site Collection, create a view with some Email Columns called 'Email View', and set it as the default View for this location. If the Content Types 'OnePlaceMail Email' not exist, the script would create it.
+* The SitesDocLibs.CSV file already contains an example deployment for the 'Contoso' Tenant. 
+	For the first site 'Marketing', it would deploy the Email Content Type 'OnePlaceMail Email' to the 'Emails' Document Library, create a view with some Email Columns called 'Email View', and set it as the default View for this location. If the Content Types 'OnePlaceMail Email' not exist, the script would create it.
+	For the second site 'Accounting', it would deploy the Email Content Type 'Email' to the 'Documents' Document Library, but create no new View nor set one to Default.
+	
+
 * You need a new line for each uniquely named Site Content Type, define which Site Collection it will be created in, and (optionally) which Document Library it will be added to. 
 * When listing a subsite/subweb for the 'SiteUrl', the email columns and content type will be created in it's parent Site Collection, eg http://<span>contoso.sharepoint.com/sites/**SiteCollection**/SubSite. You can still list a Document Library within that Subsite to have the Site Content Type added to.
 * You may use this script for purely Site Column/Content Type creation by omitting any data for the Document Library/View columns.
