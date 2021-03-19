@@ -275,6 +275,7 @@ Try {
                 $this.connect($true)
             }
             Try {
+                $script:emailColumns = $null
                 $script:emailColumns = Get-PnPField -Group $script:columnGroupName
             }
             Catch {
@@ -323,6 +324,7 @@ Try {
                 
                 $columnCheckRetry = 5
                 Do {
+                    Write-Log "Checking for email column count."
                     $script:emailColumns = Get-PnPField -Group $script:columnGroupName
                     If($script:emailColumns.Count -ne 35) {
                         $columnCheckRetry--
@@ -611,7 +613,7 @@ Try {
 
             If($currentWeb.url -ne $rootSharePointUrl) {
                 #Connect to site collection
-                Write-Host "Prompting for PnP Management Shell Authentication. Please copy the code displayed into the browser as directed and log in." -ForegroundColor Green
+                Write-Host "Prompting for PnP Management Shell Authentication." -ForegroundColor Green
                 $conn = Connect-PnPOnline -Url $rootSharePointUrl -Interactive
                 #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
                 Write-Log "Testing connection with 'Get-PnPWeb'..."
@@ -689,6 +691,7 @@ Try {
         }   
         Write-Host "Deployment complete! Please check your SharePoint Environment to verify completion. If you would like to copy the output above, do so now before pressing 'Enter'." 
         Write-Log -Level Info -Message "Deployment complete." 
+        Pause
     }
 
     #Start of Script
