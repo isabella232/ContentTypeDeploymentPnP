@@ -41,7 +41,7 @@ When you have finished customizing the file, please save and close it to ensure 
     Note that you will need to ensure you have uninstalled any previous 'Classic' PnP Cmdlets prior to installing this. If you have installed the cmdlets previously using an MSI file these need to be uninstalled from Control Panel, but if you have installed the cmdlets previously using PowerShell Get you can uninstall them with this command (as Administrator):
 
     ```
-    Uninstall-Module 'SharePointPnPPowerShellOnline'
+    Uninstall-Module 'SharePointPnPPowerShellOnline' -Force
     ```
     
     This script will also require your Microsoft 365 Administrator to grant App access to the PnP Management Shell in your 365 Tenant. It is recommended that you check and grant this ahead of running the script by entering this command in PowerShell and following the directions. PnP.PowerShell Documentation and more information [here](https./pnp.github.io/powershell/articles/authentication.html).
@@ -88,13 +88,13 @@ When you have finished customizing the file, please save and close it to ensure 
     > Select this option to disable/enable automatic Email Column creation. Default value is 'True'.
     
     3\: Email Column Group: OnePlace Solutions
-    > This is the name of the Column Group we expect to find the Email Columns when creating Content Types. If you have left 2 as 'True' this can be left as is.
+    > This is the name of the Column Group we expect to find the Email Columns when creating Content Types. If you have left 2 as 'True' this can be left as is. Default value is 'OnePlace Solutions'
     
     4\: Enable Email View Creation: False
     > Select this option to enable/disable automatic Email View creation in the Document Libraries you specified in the CSV file. Default value is 'False'.
     
     5\: Email View Name: Emails
-    > This is the name of the View the script will create if you changed 4. to 'True'.
+    > This is the name of the View the script will create if you changed 4. to 'True'. Default value is 'Emails'
     
     6\: Set View 'Emails' as default: False
     > If you have changed 4. to 'True', select this option to enable/disable setting that view as Default in the locations it is created. Default value is 'False'
@@ -103,7 +103,7 @@ When you have finished customizing the file, please save and close it to ensure 
     > Once you have changed the other options as required, select this option to begin executing the script.
     
     L\: Change Log file path (Currently: 'C:\Users\<username>\Documents\OPSScriptLog.txt')
-    > You can opt to log the script actions to a different path. Default value is in the current User's profile under 'Documents\OPSScriptLog.txt'.
+    > You can opt to log the script actions to a different path. Default value is in the current User's profile under 'Documents\OPSScriptLog<date>.txt'.
     
 5.  The script will automatically parse your Microsoft 365 Tenant name from the CSV file, please confirm this is correct and continue.]
     ![SPO_ConfirmTenant](./README-Images/SPO_ConfirmTenant.png)
