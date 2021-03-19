@@ -200,12 +200,12 @@ Try {
                 #Connect to site
                 
                 If($true -eq $parentSiteCollection) {
-                    Connect-PnPOnline -Url $this.url -PnPManagementShell
+                    Connect-PnPOnline -Url $this.url -Interactive
                     Write-Log "->Connecting to parent Site Collection"
-                    Connect-PnPOnline -Url $((Get-PnPSite).Url) -PnPManagementShell
+                    Connect-PnPOnline -Url $((Get-PnPSite).Url) -Interactive
                 }
                 Else {
-                    Connect-PnPOnline -Url $this.url -PnPManagementShell
+                    Connect-PnPOnline -Url $this.url -Interactive
                 }
                 
                 #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
@@ -612,7 +612,7 @@ Try {
             If($currentWeb.url -ne $rootSharePointUrl) {
                 #Connect to site collection
                 Write-Host "Prompting for PnP Management Shell Authentication. Please copy the code displayed into the browser as directed and log in." -ForegroundColor Green
-                $conn = Connect-PnPOnline -Url $rootSharePointUrl -PnPManagementShell -LaunchBrowser
+                $conn = Connect-PnPOnline -Url $rootSharePointUrl -Interactive
                 #Sometimes you can continue before authentication has completed, this Start-Sleep adds a delay to account for this
                 Write-Log "Testing connection with 'Get-PnPWeb'..."
                 Start-Sleep -Seconds 3
