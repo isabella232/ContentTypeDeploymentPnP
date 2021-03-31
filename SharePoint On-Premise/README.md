@@ -63,7 +63,7 @@ When you have finished customizing the file, please save and close it to ensure 
 3. Run the below command to invoke the current(master) version of the script:
 
    ```
-   Invoke-Expression (New-Object Net.WebClient).DownloadString(‘https://raw.githubusercontent.com/OnePlaceSolutions/ContentTypeDeploymentPnP/master/DeployECTToSitesDoclibs-ONP.ps1’)
+   Invoke-Expression (New-Object Net.WebClient).DownloadString(‘https://raw.githubusercontent.com/OnePlaceSolutions/ContentTypeDeploymentPnP/master/SharePoint%20On-Premise/DeployECTToSitesDoclibs-ONP.ps1’)
    ```
    ![InvokeExpression](./README-Images/InvokeExpression.png)
 
