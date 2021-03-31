@@ -111,6 +111,9 @@ Try {
         Write-Log -Level Info -Message "PnP Module Installed: $pnpModule"
     }
 
+    Write-Host "`nPlease ensure you have checked and installed the pre-requisites listed in the GitHub documentation prior to running this script."
+    Write-Host "!!! If pre-requisites for the Content Type Deployment have not been completed this script/process may fail !!!" -ForegroundColor Yellow
+    Pause
     Start-Sleep -Seconds 2
 
     #Contains all our Site Collections as siteCol objects
@@ -526,7 +529,7 @@ Try {
             Write-Host "These Columns will be added to the Site Content Types listed in your CSV file."
             
             #Get the Content Type Object for 'Document' from SP, we will use this as the parent Content Type for our email Content Type
-            $DocCT = Get-PnPContentType -Identity "Document"
+            $DocCT = Get-PnPContentType -Identity 0x0101
             If ($null -eq $DocCT) {
                 $filler = "Couldn't get 'Document' Site Content Type in $siteName. Skipping Site Collection: $siteName"
                 Write-Log -Level Warn -Message $filler
@@ -636,15 +639,10 @@ Try {
         $customInput = Read-Host "Please select an option" 
         switch ($customInput) { 
             '1' {
-                #On-Premises
-                Write-Log -Level Info -Message "User has selected Option 1 for SP On Prem."
-                Clear-Host
-
                 If(($pnpModule -like "*Online") -or ($pnpModule -like "PnP.PowerShell")){
                     Write-Log -Level Warn -Message "SharePoint On-Premises selected for deployment, but SharePoint Online PnP CmdLets installed. Please check installed version before continuing."
                     Pause
                 }
-
                 #Start with getting the CSV file of Site Collections, Document Libraries and Content Types
                 EnumerateSitesDocLibs
                 #Connect to SharePoint On-Premises, specifically the root site so we can iterate over the site collections
