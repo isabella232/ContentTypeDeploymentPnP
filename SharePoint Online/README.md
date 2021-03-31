@@ -108,7 +108,7 @@ When you have finished customizing the file, please save and close it to ensure 
 5.  The script will automatically parse your Microsoft 365 Tenant name from the CSV file, please confirm this is correct and continue.]
     ![SPO_ConfirmTenant](./README-Images/SPO_ConfirmTenant.png)
 
-6.  You will be asked to authenticate to your SharePoint Admin Site through the PnP Management Shell. Please follow the directions from the script, and if required consent to the PnP Management Shell.
+6.  You will be asked to authenticate to your SharePoint Admin Site through the PnP Management Shell. Please follow the directions from the script, and if required consent to the PnP Management Shell. You may be prompted immediately for a login rather than see the screen pictured below.
     ![SPO_PnPManagementShellLogin](./README-Images/SPO_PnPManagementShellLogin.png)
 
 
