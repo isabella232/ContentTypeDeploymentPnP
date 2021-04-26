@@ -4,8 +4,18 @@
 #>
 $ErrorActionPreference = 'Stop'
 
-#Columns to add to the Email View if we are creating one. Edit as required based on Internal Naming
+#Columns to add to the Email View if we are creating one, it's row limit and it's sort query. Edit as required based on Internal Naming
 [string[]]$script:emailViewColumns = @("EmHasAttachments","EmSubject","EmTo","EmDate","EmFromName")
+$script:rowLimit = 100
+[string]$script:viewQuery = "<OrderBy><FieldRef Name='EmDate' Ascending='FALSE'/></OrderBy>"
+
+#Flags for whether we create  email views or not, and if so what name to use
+[boolean]$script:createEmailViews = $false
+[string]$script:emailViewName = "Emails"
+[boolean]$script:emailViewDefault = $false
+
+#Flag for whether we automatically create the OnePlaceMail Email Columns
+[boolean]$script:createEmailColumns = $true
 
 [string]$script:logFile = "OPSScriptLog.txt"
 [string]$script:logPath = "$env:userprofile\Documents\$script:logFile"
@@ -124,14 +134,6 @@ Try {
 
     #Contains all our Site Collections as siteCol objects
     $script:siteColsHT = @{ }
-
-    #Flag for whether we create  email views or not, and if so what name to use
-    [boolean]$script:createEmailViews = $false
-    [string]$script:emailViewName = "Emails"
-    [boolean]$script:emailViewDefault = $false
-
-    #Flag for whether we automatically create the OnePlaceMail Email Columns
-    [boolean]$script:createEmailColumns = $true
 
     #Name of Column group containing the Email Columns, and an object to contain the Email Columns
     [string]$script:columnGroupName = "OnePlace Solutions"
@@ -309,7 +311,7 @@ Try {
                 ForEach ($line in $rawXml) {
                     Try {
                         If (($line.ToString() -match 'Name="Em') -or ($line.ToString() -match 'Name="Doc')) {
-                            $fieldAdded = Add-PnPFieldFromXml -fieldxml $line -ErrorAction Stop | Out-Null
+                            Add-PnPFieldFromXml -fieldxml $line -ErrorAction Stop
                         }
                     }
                     Catch {
@@ -355,7 +357,7 @@ Try {
             Else {
                 Write-Log "Columns found for group '$script:columnGroupName':"
                 $script:emailColumns | Format-Table
-                Write-Host "These Columns will be added to the Site Content Types extracted from your CSV file:"
+                Write-Host "These Columns will be added to the Site Content Types extracted from your CSV file:" -ForegroundColor Yellow
                 Write-Log "$([string]$this.contentTypes)"
                 $this.contentTypes | Format-Table
             
@@ -506,11 +508,11 @@ Try {
                     Write-Log "Adding Email View '$viewName' to Document Library '$($this.name)'."
                     If($script:emailViewDefault) {
                         Write-Log "Email View will be created as default view..."
-                        Add-PnPView -List $this.name -Title $viewName -Fields $script:emailViewColumns -SetAsDefault -RowLimit 100 -ErrorAction Continue
+                        Add-PnPView -List $this.name -Title $viewName -Fields $script:emailViewColumns -Query $script:viewQuery -SetAsDefault -RowLimit $script:rowLimit -Paged -ErrorAction Continue
                     }
                     Else {
                         Write-Log "Email View will not be created as default view..."
-                        Add-PnPView -List $this.name -Title $viewName -Fields $script:emailViewColumns -RowLimit 100 -ErrorAction Continue
+                        Add-PnPView -List $this.name -Title $viewName -Fields $script:emailViewColumns -Query $script:viewQuery -RowLimit $script:rowLimit -Paged -ErrorAction Continue
                     }
                     #Let SharePoint catch up for a moment
                     Start-Sleep -Seconds 2
