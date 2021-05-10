@@ -809,10 +809,15 @@ Try {
     }
 }
 Catch {
-    Write-Log -Level Error -Message "Caught an exception at the bottom level. `nException Type: $($_.Exception.GetType().FullName) `nException Message: $($_.Exception.Message)"
-    Write-Host "`n!!! Please send the log file at '$script:logPath' to 'support@oneplacesolutions.com' for assistance !!!" -ForegroundColor Yellow
-    Write-Host "`n!!! Please send the log file at '$script:logPath' to 'support@oneplacesolutions.com' for assistance !!!" -ForegroundColor Red
-    Write-Host "`n!!! Please send the log file at '$script:logPath' to 'support@oneplacesolutions.com' for assistance !!!" -ForegroundColor Cyan
+    If($($_.Exception.Message) -like 'interactive') {
+        Write-Log -Level Error -Message "PnP.PowerShell is out of date. Please open PowerShell as an Administrator, enter command 'Update-Module 'PnP.PowerShell', continue the update and retry the script."
+    }
+    Else {
+        Write-Log -Level Error -Message "Caught an exception at the top level. `nException Type: $($_.Exception.GetType().FullName) `nException Message: $($_.Exception.Message)"
+        Write-Host "`n!!! Please send the log file at '$script:logPath' to 'support@oneplacesolutions.com' for assistance !!!" -ForegroundColor Yellow
+        Write-Host "`n!!! Please send the log file at '$script:logPath' to 'support@oneplacesolutions.com' for assistance !!!" -ForegroundColor Red
+        Write-Host "`n!!! Please send the log file at '$script:logPath' to 'support@oneplacesolutions.com' for assistance !!!" -ForegroundColor Cyan
+    }
     Pause
 }
 Finally {
