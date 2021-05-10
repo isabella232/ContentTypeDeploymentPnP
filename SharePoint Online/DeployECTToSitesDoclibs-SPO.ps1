@@ -809,7 +809,7 @@ Try {
     }
 }
 Catch {
-    If($($_.Exception.Message) -like 'interactive') {
+    If($($_.Exception.Message) -like "*interactive*") {
         Write-Log -Level Error -Message "PnP.PowerShell is out of date. Please open PowerShell as an Administrator, enter command 'Update-Module 'PnP.PowerShell', continue the update and retry the script."
     }
     Else {
