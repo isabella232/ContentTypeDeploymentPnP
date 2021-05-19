@@ -99,13 +99,18 @@ Try {
     Write-Host "Performing Pre-Requisite checks, please wait..." -ForeGroundColor Yellow
     Start-Sleep -Seconds 3
 
-    #Check for module versions of PnP / SPOMS
+    #Check for module versions of PnP
     Try {
         Write-Host "Checking if PnP installed via Module..." -ForegroundColor Cyan
         $pnpModule = Get-InstalledModule "*PnP*" | Select-Object Name, Version
+        If($pnpModule.Name -like "*SharePointPnPPowerShell2013*") {
+            Write-Log -Level Warn -Message "SharePoint 2013 PnP Cmdlets detected. This script does not support SharePoint 2013."
+            Write-Host "Please use the EmailColumnsPnP script to create the Email Columns, and create/deploy your Email Content Type using another method."
+            Pause
+        }
     }
     Catch {
-        #Couldn't check PNP or SPOMS Module versions, Package Manager may be absent
+        #Couldn't check PNP Module versions, Package Manager may be absent
     }
     Finally {
         Write-Log -Level Info -Message "PnP Module Installed: $pnpModule"

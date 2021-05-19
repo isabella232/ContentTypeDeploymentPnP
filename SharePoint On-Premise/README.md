@@ -31,7 +31,7 @@ When you have finished customizing the file, please save and close it to ensure 
 
 ### Pre-Requisites
 
-1.  **(SharePoint On-Premise Only)** [The SharePoint PnP PowerShell cmdlets](https://github.com/pnp/PnP-PowerShell). 
+1.  **(SharePoint On-Premise 2016/2019 Only)** [The SharePoint PnP PowerShell cmdlets](https://github.com/pnp/PnP-PowerShell). 
     You will need to install **only the the cmdlets that target your version of SharePoint** on the machine you are running the script from. If you have installed the cmdlets previously using an MSI file these need to be uninstalled from Control Panel, but if you have installed the cmdlets previously using PowerShell Get you can update them with this command:
     ```
     Update-Module SharePointPnPPowerShell<version>
@@ -43,6 +43,8 @@ When you have finished customizing the file, please save and close it to ensure 
     ```
     > ![](./README-Images/installPnPClassic.png)
 	
+	
+	Please note that SharePoint 2013 is not supported with this script.
 
 ### Technical Assumptions and Considerations
 
