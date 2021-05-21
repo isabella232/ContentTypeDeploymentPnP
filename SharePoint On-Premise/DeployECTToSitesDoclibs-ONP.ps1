@@ -105,7 +105,7 @@ Try {
         $pnpModule = Get-InstalledModule "*PnP*" | Select-Object Name, Version
         If($pnpModule.Name -like "*SharePointPnPPowerShell2013*") {
             Write-Log -Level Warn -Message "SharePoint 2013 PnP Cmdlets detected. This script does not support SharePoint 2013."
-            Write-Host "Please use the EmailColumnsPnP script to create the Email Columns, and create/deploy your Email Content Type using another method."
+            Write-Host "Please use the EmailColumnsPnP script to create the Email Columns, and create/deploy your Email Content Type using another method." -ForegroundColor Yellow
             Pause
         }
     }
