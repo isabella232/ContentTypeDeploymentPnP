@@ -191,7 +191,7 @@ Try{
         [void]auth() {
             Try{
                 Write-Log "Prompting for PnP Management Shell Authentication"
-                Connect-PnPOnline -url $this.rootUrl -PnPManagementShell -LaunchBrowser
+                Connect-PnPOnline -url $this.rootUrl -Interactive
                 $currentWeb = Get-PnPWeb -ErrorAction Stop
                 Write-Log "Connected to '$($currentWeb.Title)' at '$($this.rootUrl)'"
                 $this.authorizedPnP = $true
@@ -258,7 +258,7 @@ Try{
 
         [void]connect() {
             Try{
-                Connect-PnPOnline -url $this.url -PnPManagementShell
+                Connect-PnPOnline -url $this.url -Interactive
                 $this.currentWeb = Get-PnPWeb -ErrorAction Stop
                 $this.currentSite = Get-PnPSite -ErrorAction Stop
                 Write-Log "Connected to $($this.currentWeb.Title)"
@@ -307,7 +307,7 @@ Try{
             
             If(-not $this.isSiteCollection) {
                 #Create Columns and Content Types at the Site Collection level for best practice
-                Connect-PnPOnline -Url ($this.currentSite.url) -PnPManagementShell
+                Connect-PnPOnline -Url ($this.currentSite.url) -Interactive
             }
             Try {
                 $emailColumns = Get-PnPField -Group 'OnePlace Solutions'
@@ -374,7 +374,7 @@ Try{
 
             If(-not $this.isSiteCollection) {
                 #Connect back to the current sub-web
-                Connect-PnPOnline -Url ($this.currentWeb.url) -PnPManagementShell
+                Connect-PnPOnline -Url ($this.currentWeb.url) -Interactive
             }
         }
 
@@ -382,7 +382,7 @@ Try{
             If($this.emailColumnsCreated) {
                 If(-not $this.isSiteCollection) {
                     #Create Columns and Content Types at the Site Collection level for best practice
-                    Connect-PnPOnline -Url ($this.currentSite.url) -PnPManagementShell
+                    Connect-PnPOnline -Url ($this.currentSite.url) -Interactive
                 }
 
                 $emailColumns = Get-PnPField -Group "OnePlace Solutions" -InSiteHierarchy
@@ -469,7 +469,7 @@ Try{
 
                 If(-not $this.isSiteCollection) {
                     #Connect back to the current sub-web
-                    Connect-PnPOnline -Url ($this.currentWeb.url) -PnPManagementShell
+                    Connect-PnPOnline -Url ($this.currentWeb.url) -Interactive
                 }
             }
             Else {
@@ -584,6 +584,7 @@ Try{
             }
             '2' {
                 $script:tenant.execute()
+                Pause
             }
             'c' {
                 #clear logins
