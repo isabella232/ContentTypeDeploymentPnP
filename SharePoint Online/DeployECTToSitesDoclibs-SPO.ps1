@@ -498,10 +498,11 @@ Try {
             Try {
                 Try {
                     $view = Get-PnPView -List $this.name -Identity $viewName -ErrorAction Stop
-                    Write-Log "View '$viewName' in Document Library '$($this.name)' already exists, will set as Default View if required but otherwise skipping."
+                    Write-Log "View '$viewName' in Document Library '$($this.name)' already exists, will set as Default View if required and update fields but otherwise skipping."
                     If($script:emailViewDefault) {
                         Set-PnPView -List $this.name -Identity $viewName -Values @{DefaultView =$True}
                     }
+                    Set-PnPView -List $this.name -Identity $viewName -Fields $script:emailViewColumns
                 }
                 Catch [System.NullReferenceException]{
                     #View does not exist, this is good
