@@ -285,11 +285,11 @@ Try {
                 Write-Log -Level Warn -Message "Couldn't check email columns, will attempt to add them anyway..."
             }
 
-            #Check if we have 35 columns in our Column Group
-            If ($script:emailColumns.Count -eq 35) {
+            #Check if we have 34 columns in our Column Group
+            If ($script:emailColumns.Count -ge 34) {
                 Write-Log "All Email columns already present in group '$script:columnGroupName', skipping adding."
             }
-            #Create the Columns if we didn't find 35
+            #Create the Columns if we didn't find 34
             Else {
                 $script:columnsXMLPath = "$env:temp\email-columns.xml"
                 If (-not (Test-Path $script:columnsXMLPath)) {
@@ -328,7 +328,7 @@ Try {
                 Do {
                     Write-Log "Checking for email column count."
                     $script:emailColumns = Get-PnPField -Group $script:columnGroupName
-                    If($script:emailColumns.Count -ne 35) {
+                    If($script:emailColumns.Count -ne 34) {
                         $columnCheckRetry--
                         Start-Sleep -Seconds 1
                     }
