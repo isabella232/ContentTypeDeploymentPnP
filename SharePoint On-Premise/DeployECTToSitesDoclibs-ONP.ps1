@@ -346,11 +346,11 @@ Try {
             Write-Host "Couldn't check email columns, will attempt to add them anyway..." -ForegroundColor Yellow
         }
 
-        #Check if we have 35 columns in our Column Group
-        If ($emailColumnCount -eq 35) {
+        #Check if we have 34 columns in our Column Group
+        If ($emailColumnCount -ge 34) {
             Write-Host "All Email columns already present in group '$script:groupName', skipping adding."
         }
-        #Create the Columns if we didn't find 35
+        #Create the Columns if we didn't find 34
         Else {
             $script:columnsXMLPath = "$env:temp\email-columns.xml"
             If (-not (Test-Path $script:columnsXMLPath)) {
