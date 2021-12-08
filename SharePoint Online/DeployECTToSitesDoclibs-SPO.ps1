@@ -5,9 +5,9 @@
 $ErrorActionPreference = 'Stop'
 
 #Columns to add to the Email View if we are creating one, it's row limit and it's sort query. Edit as required based on Internal Naming
-[string[]]$script:emailViewColumns = @("EmHasAttachments","LinkFilename","EmSubject","EmTo","EmDate","EmFromName")
+[string[]]$script:emailViewColumns = @("EmHasAttachments","EmSubject","EmTo","EmDate","EmFromName")
 $script:rowLimit = 100
-[string]$script:viewQuery = "<OrderBy><FieldRef Name='EmDate' Ascending='FALSE'/></OrderBy>"
+[string]$script:viewQuery = "<Where><Eq><FieldRef Name='FSObjType'/><Value Type='Integer'>0</Value></Eq></Where><OrderBy><FieldRef Name='EmDate' Ascending='FALSE'/></OrderBy>"
 
 #Flags for whether we create  email views or not, and if so what name to use
 [boolean]$script:createEmailViews = $false
